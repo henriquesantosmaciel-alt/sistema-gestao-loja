@@ -1,0 +1,20 @@
+# Banco de dados local
+loja.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ambientes virtuais
+venv/
+env/
+.venv/
+
+# Configuracoes de IDE
+.vscode/
+.idea/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
