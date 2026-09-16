@@ -1,7 +1,8 @@
 """
-web_app.py - Interface web (Flask) do Sistema de Gestao de Loja
+web_app.py - Interface web (Flask) do LojaOS
 Dashboard moderno e minimalista, com autenticacao, controle de papeis
-(admin/vendedor), protecao CSRF e tratamento de erros consistente.
+(admin/vendedor), protecao CSRF, caixa, financeiro, pedidos/orcamentos
+e area fiscal em homologacao (sem emissao real de notas).
 """
 from datetime import date
 from functools import wraps
@@ -20,6 +21,7 @@ import vendas
 import fornecedores
 import relatorios
 import auth
+import loja_avancada as loja
 from validators import ValidationError
 from recibo import gerar_recibo_pdf
 
@@ -78,14 +80,13 @@ def permissao_necessaria(area):
 
 @app.context_processor
 def inject_globals():
-    return {"papel_usuario": session.get("papel", "admin")}
+    return {"papel_usuario": session.get("papel", "admin"), "caixa_atual": loja.caixa_aberto() if session.get("usuario") else None}
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if not auth.usuario_existe():
         return redirect(url_for("registrar"))
-
     if request.method == "POST":
         usuario = auth.autenticar(request.form.get("username", ""), request.form.get("senha", ""))
         if usuario:
@@ -100,13 +101,9 @@ def login():
 def registrar():
     if auth.usuario_existe():
         return redirect(url_for("login"))
-
     if request.method == "POST":
         try:
-            auth.criar_usuario(
-                request.form["username"], request.form["senha"],
-                request.form.get("nome"), papel="admin",
-            )
+            auth.criar_usuario(request.form["username"], request.form["senha"], request.form.get("nome"), papel="admin")
             flash("Usuario administrador criado! Faca login.", "sucesso")
             return redirect(url_for("login"))
         except ValidationError as e:
@@ -127,12 +124,12 @@ def dashboard():
     vendas_semana = relatorios.vendas_por_dia(7)
     estoque_critico = relatorios.relatorio_estoque_critico()
     valor_estoque = estoque.valor_total_estoque()
+    financeiro = loja.resumo_financeiro()
+    caixa = loja.caixa_aberto()
     return render_template(
-        "dashboard.html",
-        resumo=resumo,
-        vendas_semana=vendas_semana,
-        estoque_critico=estoque_critico,
-        valor_estoque=valor_estoque,
+        "dashboard.html", resumo=resumo, vendas_semana=vendas_semana,
+        estoque_critico=estoque_critico, valor_estoque=valor_estoque,
+        financeiro=financeiro, caixa=caixa,
     )
 
 
@@ -150,12 +147,9 @@ def pagina_estoque():
 @permissao_necessaria("estoque")
 def novo_produto():
     estoque.cadastrar_produto(
-        nome=request.form.get("nome"),
-        categoria=request.form.get("categoria"),
-        preco_custo=request.form.get("preco_custo") or 0,
-        preco_venda=request.form.get("preco_venda"),
-        quantidade=request.form.get("quantidade") or 0,
-        estoque_minimo=request.form.get("estoque_minimo") or 5,
+        nome=request.form.get("nome"), categoria=request.form.get("categoria"),
+        preco_custo=request.form.get("preco_custo") or 0, preco_venda=request.form.get("preco_venda"),
+        quantidade=request.form.get("quantidade") or 0, estoque_minimo=request.form.get("estoque_minimo") or 5,
     )
     flash("Produto cadastrado com sucesso.", "sucesso")
     return redirect(url_for("pagina_estoque"))
@@ -193,9 +187,7 @@ def pagina_clientes():
 @permissao_necessaria("clientes")
 def novo_cliente():
     clientes.cadastrar_cliente(
-        nome=request.form.get("nome"),
-        telefone=request.form.get("telefone"),
-        email=request.form.get("email"),
+        nome=request.form.get("nome"), telefone=request.form.get("telefone"), email=request.form.get("email"),
     )
     flash("Cliente cadastrado com sucesso.", "sucesso")
     return redirect(url_for("pagina_clientes"))
@@ -240,19 +232,16 @@ def pagina_vendas():
 def nova_venda():
     produto_ids = request.form.getlist("produto_id")
     quantidades = request.form.getlist("quantidade")
-    itens = [
-        {"produto_id": pid, "quantidade": qtd}
-        for pid, qtd in zip(produto_ids, quantidades) if pid and qtd
-    ]
+    itens = [{"produto_id": pid, "quantidade": qtd} for pid, qtd in zip(produto_ids, quantidades) if pid and qtd]
     cliente_id = request.form.get("cliente_id") or None
     forma_pagamento = request.form.get("forma_pagamento") or "dinheiro"
-
-    venda_id, total = vendas.registrar_venda(
-        itens,
-        int(cliente_id) if cliente_id else None,
-        forma_pagamento,
-        vendedor=session.get("usuario"),
-    )
+    venda_id, total = vendas.registrar_venda(itens, int(cliente_id) if cliente_id else None, forma_pagamento, vendedor=session.get("usuario"))
+    caixa = loja.caixa_aberto()
+    if caixa:
+        from database import get_connection as _gc
+        with _gc() as c:
+            c.execute("UPDATE vendas SET caixa_id = ? WHERE id = ?", (caixa["id"], venda_id))
+        loja.movimentar_caixa(caixa["id"], "entrada", total, f"Venda #{venda_id}", session.get("usuario"))
     flash(f"Venda #{venda_id} registrada. Total: R$ {total:.2f}", "sucesso")
     return redirect(url_for("pagina_vendas"))
 
@@ -302,10 +291,8 @@ def pagina_fornecedores():
 @permissao_necessaria("fornecedores")
 def novo_fornecedor():
     fornecedores.cadastrar_fornecedor(
-        nome=request.form.get("nome"),
-        telefone=request.form.get("telefone"),
-        email=request.form.get("email"),
-        cnpj=request.form.get("cnpj"),
+        nome=request.form.get("nome"), telefone=request.form.get("telefone"),
+        email=request.form.get("email"), cnpj=request.form.get("cnpj"),
     )
     flash("Fornecedor cadastrado.", "sucesso")
     return redirect(url_for("pagina_fornecedores"))
@@ -316,8 +303,7 @@ def novo_fornecedor():
 @permissao_necessaria("fornecedores")
 def nova_compra():
     fornecedores.registrar_compra(
-        produto_id=int(request.form["produto_id"]),
-        quantidade=request.form.get("quantidade"),
+        produto_id=int(request.form["produto_id"]), quantidade=request.form.get("quantidade"),
         preco_unitario=request.form.get("preco_unitario"),
         fornecedor_id=int(request.form["fornecedor_id"]) if request.form.get("fornecedor_id") else None,
     )
@@ -338,15 +324,9 @@ def pagina_relatorios():
     vendas_semana = relatorios.vendas_por_dia(7)
     formas_pagamento = relatorios.vendas_por_forma_pagamento()
     return render_template(
-        "relatorios.html",
-        mais_vendidos=mais_vendidos,
-        top_clientes=top_clientes,
-        lucro=lucro,
-        estoque_critico=estoque_critico,
-        vendas_semana=vendas_semana,
-        formas_pagamento=formas_pagamento,
-        inicio_mes=inicio_mes,
-        hoje=hoje,
+        "relatorios.html", mais_vendidos=mais_vendidos, top_clientes=top_clientes, lucro=lucro,
+        estoque_critico=estoque_critico, vendas_semana=vendas_semana, formas_pagamento=formas_pagamento,
+        inicio_mes=inicio_mes, hoje=hoje,
     )
 
 
@@ -357,31 +337,22 @@ def exportar_relatorio():
     inicio = request.args.get("inicio") or date.today().replace(day=1).isoformat()
     fim = request.args.get("fim") or date.today().isoformat()
     buffer = relatorios.exportar_vendas_csv(inicio, fim)
-    return app.response_class(
-        buffer.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment;filename=vendas_{inicio}_a_{fim}.csv"},
-    )
+    return app.response_class(buffer.getvalue(), mimetype="text/csv",
+                               headers={"Content-Disposition": f"attachment;filename=vendas_{inicio}_a_{fim}.csv"})
 
 
 @app.route("/usuarios")
 @login_necessario
 @permissao_necessaria("usuarios")
 def pagina_usuarios():
-    lista = auth.listar_usuarios()
-    return render_template("usuarios.html", usuarios=lista)
+    return render_template("usuarios.html", usuarios=auth.listar_usuarios())
 
 
 @app.route("/usuarios/novo", methods=["POST"])
 @login_necessario
 @permissao_necessaria("usuarios")
 def novo_usuario():
-    auth.criar_usuario(
-        request.form.get("username"),
-        request.form.get("senha"),
-        request.form.get("nome"),
-        request.form.get("papel", "vendedor"),
-    )
+    auth.criar_usuario(request.form.get("username"), request.form.get("senha"), request.form.get("nome"), request.form.get("papel", "vendedor"))
     flash("Usuario criado com sucesso.", "sucesso")
     return redirect(url_for("pagina_usuarios"))
 
@@ -393,6 +364,142 @@ def desativar_usuario(usuario_id):
     auth.desativar_usuario(usuario_id)
     flash("Usuario desativado.", "sucesso")
     return redirect(url_for("pagina_usuarios"))
+
+
+@app.route("/caixa", methods=["GET", "POST"])
+@login_necessario
+@permissao_necessaria("vendas")
+def pagina_caixa():
+    caixa = loja.caixa_aberto()
+    if request.method == "POST":
+        acao = request.form.get("acao")
+        if acao == "abrir":
+            loja.abrir_caixa(session.get("usuario"), request.form.get("saldo_inicial"))
+            flash("Caixa aberto com sucesso.", "sucesso")
+        elif acao == "movimentar" and caixa:
+            loja.movimentar_caixa(caixa["id"], request.form.get("tipo"), request.form.get("valor"), request.form.get("descricao"), session.get("usuario"))
+            flash("Movimentacao registrada.", "sucesso")
+        elif acao == "fechar" and caixa:
+            loja.fechar_caixa(caixa["id"], request.form.get("saldo_final"), request.form.get("observacao"))
+            flash("Caixa fechado.", "sucesso")
+        return redirect(url_for("pagina_caixa"))
+
+    caixa, movimentos, esperado = loja.resumo_caixa(caixa["id"]) if caixa else (None, [], 0)
+    historico = loja.historico_caixas()
+    return render_template("caixa.html", caixa=caixa, movimentos=movimentos, esperado=esperado, historico=historico)
+
+
+@app.route("/financeiro", methods=["GET", "POST"])
+@login_necessario
+@permissao_necessaria("relatorios")
+def pagina_financeiro():
+    if request.method == "POST":
+        loja.criar_conta(
+            tipo=request.form.get("tipo"), descricao=request.form.get("descricao"),
+            valor=request.form.get("valor"), vencimento=request.form.get("vencimento") or None,
+            categoria=request.form.get("categoria"), entidade=request.form.get("entidade"),
+        )
+        flash("Conta registrada.", "sucesso")
+        return redirect(url_for("pagina_financeiro"))
+    filtro = request.args.get("status", "aberta")
+    return render_template("financeiro.html", contas=loja.listar_contas(status=filtro if filtro != "todas" else None),
+                            resumo=loja.resumo_financeiro(), filtro=filtro)
+
+
+@app.route("/financeiro/<int:conta_id>/baixar", methods=["POST"])
+@login_necessario
+@permissao_necessaria("relatorios")
+def baixar_conta(conta_id):
+    loja.baixar_conta(conta_id)
+    flash("Conta baixada com sucesso.", "sucesso")
+    return redirect(url_for("pagina_financeiro"))
+
+
+@app.route("/pedidos", methods=["GET", "POST"])
+@login_necessario
+@permissao_necessaria("vendas")
+def pagina_pedidos():
+    if request.method == "POST":
+        ids = request.form.getlist("produto_id")
+        qtds = request.form.getlist("quantidade")
+        itens = [{"produto_id": pid, "quantidade": q} for pid, q in zip(ids, qtds) if pid and q]
+        cliente_id = request.form.get("cliente_id") or None
+        loja.criar_pedido(int(cliente_id) if cliente_id else None, request.form.get("tipo", "orcamento"),
+                           request.form.get("validade"), request.form.get("observacao"), itens)
+        flash("Pedido/orcamento criado com sucesso.", "sucesso")
+        return redirect(url_for("pagina_pedidos"))
+    return render_template("pedidos.html", pedidos=loja.listar_pedidos(), produtos=estoque.listar_produtos(), clientes=clientes.listar_clientes())
+
+
+@app.route("/pedidos/<int:pedido_id>")
+@login_necessario
+@permissao_necessaria("vendas")
+def detalhe_pedido(pedido_id):
+    pedido, itens = loja.detalhes_pedido(pedido_id)
+    if not pedido:
+        flash("Pedido nao encontrado.", "erro")
+        return redirect(url_for("pagina_pedidos"))
+    return render_template("pedido_detalhe.html", pedido=pedido, itens=itens)
+
+
+@app.route("/pedidos/<int:pedido_id>/converter", methods=["POST"])
+@login_necessario
+@permissao_necessaria("vendas")
+def converter_pedido(pedido_id):
+    pedido, itens = loja.detalhes_pedido(pedido_id)
+    if not pedido:
+        flash("Pedido nao encontrado.", "erro")
+        return redirect(url_for("pagina_pedidos"))
+    itens_venda = [{"produto_id": i["produto_id"], "quantidade": i["quantidade"]} for i in itens]
+    venda_id, total = vendas.registrar_venda(itens_venda, pedido["cliente_id"], "dinheiro", vendedor=session.get("usuario"))
+    loja.atualizar_status_pedido(pedido_id, "convertido")
+    flash(f"Pedido convertido na venda #{venda_id}.", "sucesso")
+    return redirect(url_for("detalhe_venda", venda_id=venda_id))
+
+
+@app.route("/pedidos/<int:pedido_id>/cancelar", methods=["POST"])
+@login_necessario
+@permissao_necessaria("vendas")
+def cancelar_pedido(pedido_id):
+    loja.atualizar_status_pedido(pedido_id, "cancelado")
+    flash("Pedido cancelado.", "sucesso")
+    return redirect(url_for("pagina_pedidos"))
+
+
+@app.route("/fiscal", methods=["GET", "POST"])
+@login_necessario
+@permissao_necessaria("relatorios")
+def pagina_fiscal():
+    if request.method == "POST":
+        loja.salvar_empresa(request.form)
+        flash("Dados fiscais da empresa atualizados.", "sucesso")
+        return redirect(url_for("pagina_fiscal"))
+    return render_template("fiscal.html", empresa=loja.obter_empresa(), notas=loja.listar_notas(), vendas_recentes=vendas.listar_vendas(limite=20))
+
+
+@app.route("/fiscal/nota/<int:venda_id>", methods=["POST"])
+@login_necessario
+@permissao_necessaria("relatorios")
+def gerar_nota_homologacao(venda_id):
+    loja.criar_nota_homologacao(venda_id, request.form.get("tipo", "NFC-e"))
+    flash("Documento de homologacao gerado (sem valor fiscal). Configure uma API fiscal para emissao real.", "sucesso")
+    return redirect(url_for("pagina_fiscal"))
+
+
+@app.route("/auditoria")
+@login_necessario
+@permissao_necessaria("usuarios")
+def pagina_auditoria():
+    return render_template("auditoria.html", registros=loja.listar_auditoria())
+
+
+@app.route("/backup", methods=["POST"])
+@login_necessario
+@permissao_necessaria("usuarios")
+def gerar_backup():
+    nome = loja.criar_backup()
+    flash(f"Backup criado com sucesso: {nome}", "sucesso")
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/api/produto/<int:produto_id>")
