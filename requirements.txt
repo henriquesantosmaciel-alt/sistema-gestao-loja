@@ -1,1 +1,2 @@
-PLACEHOLDER_REQ
+# Este projeto utiliza apenas bibliotecas padrão do Python (sqlite3, datetime, contextlib).
+# Nenhuma dependência externa é necessária para a versão CLI.
