@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Relatorios{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Relatorios</h1>
+  <p class="muted">Analises gerenciais da loja</p>
+</header>
+
+<section class="cards-grid">
+  <div class="card stat">
+    <span class="stat-label">Receita do mes</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(lucro.receita) }}</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Custo do mes</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(lucro.custo) }}</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Lucro do mes</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(lucro.lucro) }}</span>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Produtos mais vendidos</h2>
+    <table class="table">
+      <thead><tr><th>Produto</th><th>Qtd vendida</th><th>Receita</th></tr></thead>
+      <tbody>
+      {% for p in mais_vendidos %}
+        <tr><td>{{ p.nome }}</td><td>{{ p.total_vendido }}</td><td>R$ {{ "%.2f"|format(p.receita) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Melhores clientes</h2>
+    <table class="table">
+      <thead><tr><th>Cliente</th><th>Compras</th><th>Total gasto</th></tr></thead>
+      <tbody>
+      {% for c in top_clientes %}
+        <tr><td>{{ c.nome }}</td><td>{{ c.qtd_compras }}</td><td>R$ {{ "%.2f"|format(c.total_gasto) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Estoque critico</h2>
+  <table class="table">
+    <thead><tr><th>Produto</th><th>Qtd</th><th>Minimo</th></tr></thead>
+    <tbody>
+    {% for p in estoque_critico %}
+      <tr><td>{{ p.nome }}</td><td><span class="badge badge-warning">{{ p.quantidade }}</span></td><td>{{ p.estoque_minimo }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Dashboard</h1>
+  <p class="muted">Visao geral da loja em tempo real</p>
+</header>
+
+<section class="cards-grid">
+  <div class="card stat">
+    <span class="stat-label">Faturamento hoje</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(resumo.faturamento_hoje) }}</span>
+    <span class="stat-sub">{{ resumo.vendas_hoje }} vendas</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Faturamento no mes</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(resumo.faturamento_mes) }}</span>
+    <span class="stat-sub">{{ resumo.vendas_mes }} vendas</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Produtos cadastrados</span>
+    <span class="stat-value">{{ resumo.total_produtos }}</span>
+    <span class="stat-sub">{{ resumo.produtos_estoque_baixo }} com estoque baixo</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Clientes</span>
+    <span class="stat-value">{{ resumo.total_clientes }}</span>
+    <span class="stat-sub">{{ resumo.total_vendas }} vendas totais</span>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Vendas dos ultimos 7 dias</h2>
+    <canvas id="graficoVendas" height="140"></canvas>
+  </div>
+  <div class="card">
+    <h2>Estoque critico</h2>
+    {% if estoque_critico %}
+    <table class="table">
+      <thead><tr><th>Produto</th><th>Qtd</th><th>Minimo</th></tr></thead>
+      <tbody>
+      {% for p in estoque_critico %}
+        <tr>
+          <td>{{ p.nome }}</td>
+          <td><span class="badge badge-warning">{{ p.quantidade }}</span></td>
+          <td>{{ p.estoque_minimo }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">Nenhum produto com estoque baixo.</p>
+    {% endif %}
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+const dias = {{ vendas_semana | map(attribute='dia') | list | tojson }};
+const totais = {{ vendas_semana | map(attribute='total') | list | tojson }};
+new Chart(document.getElementById('graficoVendas'), {
+  type: 'line',
+  data: {
+    labels: dias,
+    datasets: [{
+      label: 'Faturamento (R$)',
+      data: totais,
+      borderColor: '#6c8cff',
+      backgroundColor: 'rgba(108,140,255,0.15)',
+      tension: 0.35,
+      fill: true,
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2a2d3a' }, ticks: { color: '#9ca3af' } },
+      y: { grid: { color: '#2a2d3a' }, ticks: { color: '#9ca3af' } }
+    }
+  }
+});
+</script>
+{% endblock %}

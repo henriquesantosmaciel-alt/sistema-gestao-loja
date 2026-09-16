@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Sistema de Gestao de Loja{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% if session.get('usuario') %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>Loja<strong>OS</strong></span>
+    </div>
+    <nav>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('pagina_estoque') }}" class="{{ 'active' if request.endpoint == 'pagina_estoque' }}">Estoque</a>
+      <a href="{{ url_for('pagina_vendas') }}" class="{{ 'active' if request.endpoint == 'pagina_vendas' }}">Vendas</a>
+      <a href="{{ url_for('pagina_clientes') }}" class="{{ 'active' if request.endpoint in ['pagina_clientes','detalhe_cliente'] }}">Clientes</a>
+      <a href="{{ url_for('pagina_fornecedores') }}" class="{{ 'active' if request.endpoint == 'pagina_fornecedores' }}">Fornecedores</a>
+      <a href="{{ url_for('pagina_relatorios') }}" class="{{ 'active' if request.endpoint == 'pagina_relatorios' }}">Relatorios</a>
+    </nav>
+    <a href="{{ url_for('logout') }}" class="logout">Sair ({{ session.get('usuario') }})</a>
+  </aside>
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for categoria, mensagem in messages %}
+          <div class="flash flash-{{ categoria }}">{{ mensagem }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+</body>
+</html>

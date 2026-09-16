@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Vendas{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Vendas</h1>
+  <p class="muted">Registre e acompanhe as vendas da loja</p>
+</header>
+
+<section class="card">
+  <h2>Nova venda</h2>
+  <form method="post" action="{{ url_for('nova_venda') }}" id="form-venda">
+    <div id="itens-venda">
+      <div class="venda-item">
+        <select name="produto_id">
+          {% for p in produtos %}
+            <option value="{{ p.id }}">{{ p.nome }} (estoque: {{ p.quantidade }})</option>
+          {% endfor %}
+        </select>
+        <input type="number" name="quantidade" placeholder="Qtd" min="1" value="1" required>
+      </div>
+    </div>
+    <button type="button" id="add-item" class="btn-secondary">+ Adicionar item</button>
+
+    <div class="form-grid" style="margin-top:16px;">
+      <select name="cliente_id">
+        <option value="">Cliente (opcional)</option>
+        {% for c in clientes %}
+          <option value="{{ c.id }}">{{ c.nome }}</option>
+        {% endfor %}
+      </select>
+      <select name="forma_pagamento">
+        <option value="dinheiro">Dinheiro</option>
+        <option value="cartao">Cartao</option>
+        <option value="pix">Pix</option>
+      </select>
+      <button type="submit">Finalizar venda</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Vendas registradas</h2>
+  <table class="table">
+    <thead><tr><th>ID</th><th>Data</th><th>Total</th><th>Pagamento</th><th>Acoes</th></tr></thead>
+    <tbody>
+    {% for v in vendas %}
+      <tr>
+        <td><a class="link" href="{{ url_for('detalhe_venda', venda_id=v.id) }}">#{{ v.id }}</a></td>
+        <td>{{ v.data }}</td>
+        <td>R$ {{ "%.2f"|format(v.total) }}</td>
+        <td>{{ v.forma_pagamento }}</td>
+        <td class="actions">
+          <a class="btn-small" href="{{ url_for('recibo_venda', venda_id=v.id) }}">Recibo PDF</a>
+          <form method="post" action="{{ url_for('cancelar_venda', venda_id=v.id) }}" onsubmit="return confirm('Cancelar esta venda?');">
+            <button type="submit" class="btn-small btn-danger">Cancelar</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+document.getElementById('add-item').addEventListener('click', () => {
+  const container = document.getElementById('itens-venda');
+  const clone = container.firstElementChild.cloneNode(true);
+  clone.querySelector('input').value = 1;
+  container.appendChild(clone);
+});
+</script>
+{% endblock %}

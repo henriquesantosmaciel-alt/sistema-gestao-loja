@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Clientes</h1>
+  <p class="muted">Cadastro e historico de compras</p>
+</header>
+
+<section class="card">
+  <h2>Novo cliente</h2>
+  <form method="post" action="{{ url_for('novo_cliente') }}" class="form-grid">
+    <input type="text" name="nome" placeholder="Nome" required>
+    <input type="text" name="telefone" placeholder="Telefone">
+    <input type="email" name="email" placeholder="Email">
+    <button type="submit">Cadastrar</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Lista de clientes</h2>
+  <table class="table">
+    <thead><tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Acoes</th></tr></thead>
+    <tbody>
+    {% for c in clientes %}
+      <tr>
+        <td><a class="link" href="{{ url_for('detalhe_cliente', cliente_id=c.id) }}">{{ c.nome }}</a></td>
+        <td>{{ c.telefone or '-' }}</td>
+        <td>{{ c.email or '-' }}</td>
+        <td class="actions">
+          <form method="post" action="{{ url_for('remover_cliente', cliente_id=c.id) }}" onsubmit="return confirm('Remover este cliente?');">
+            <button type="submit" class="btn-small btn-danger">Remover</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

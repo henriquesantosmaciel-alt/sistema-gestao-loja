@@ -1,6 +1,7 @@
 """
-relatorios.py - Módulo de relatórios gerenciais
+relatorios.py - Modulo de relatorios gerenciais
 """
+from datetime import date, timedelta
 from database import get_connection
 
 
@@ -30,7 +31,7 @@ def produtos_mais_vendidos(limite=10):
 def relatorio_estoque_critico():
     with get_connection() as conn:
         cursor = conn.execute("""
-            SELECT nome, quantidade, estoque_minimo
+            SELECT id, nome, quantidade, estoque_minimo
             FROM produtos
             WHERE quantidade <= estoque_minimo
             ORDER BY quantidade ASC
@@ -66,3 +67,47 @@ def clientes_top(limite=5):
             LIMIT ?
         """, (limite,))
         return cursor.fetchall()
+
+
+def vendas_por_dia(dias=7):
+    hoje = date.today()
+    inicio = hoje - timedelta(days=dias - 1)
+    with get_connection() as conn:
+        cursor = conn.execute("""
+            SELECT date(data) AS dia, COALESCE(SUM(total), 0) AS total
+            FROM vendas
+            WHERE date(data) BETWEEN date(?) AND date(?)
+            GROUP BY date(data)
+        """, (inicio.isoformat(), hoje.isoformat()))
+        mapa = {row["dia"]: row["total"] for row in cursor.fetchall()}
+
+    resultado = []
+    for i in range(dias):
+        dia = (inicio + timedelta(days=i)).isoformat()
+        resultado.append({"dia": dia, "total": mapa.get(dia, 0)})
+    return resultado
+
+
+def resumo_dashboard():
+    hoje = date.today().isoformat()
+    inicio_mes = date.today().replace(day=1).isoformat()
+
+    fat_hoje = faturamento_periodo(hoje, hoje)
+    fat_mes = faturamento_periodo(inicio_mes, hoje)
+    estoque_critico = relatorio_estoque_critico()
+
+    with get_connection() as conn:
+        total_clientes = conn.execute("SELECT COUNT(*) AS n FROM clientes").fetchone()["n"]
+        total_produtos = conn.execute("SELECT COUNT(*) AS n FROM produtos").fetchone()["n"]
+        total_vendas = conn.execute("SELECT COUNT(*) AS n FROM vendas").fetchone()["n"]
+
+    return {
+        "faturamento_hoje": fat_hoje["faturamento"],
+        "vendas_hoje": fat_hoje["qtd_vendas"],
+        "faturamento_mes": fat_mes["faturamento"],
+        "vendas_mes": fat_mes["qtd_vendas"],
+        "produtos_estoque_baixo": len(estoque_critico),
+        "total_clientes": total_clientes,
+        "total_produtos": total_produtos,
+        "total_vendas": total_vendas,
+    }

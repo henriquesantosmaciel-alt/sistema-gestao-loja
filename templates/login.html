@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Entrar{% endblock %}
+{% block auth_content %}
+<div class="auth-wrapper">
+  <form method="post" class="auth-card">
+    <div class="brand center">
+      <span class="brand-dot"></span>
+      <span>Loja<strong>OS</strong></span>
+    </div>
+    <h1>Bem-vindo de volta</h1>
+    <p class="muted">Entre para gerenciar sua loja</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for categoria, mensagem in messages %}
+        <div class="flash flash-{{ categoria }}">{{ mensagem }}</div>
+      {% endfor %}
+    {% endwith %}
+    <label>Usuario</label>
+    <input type="text" name="username" required autofocus>
+    <label>Senha</label>
+    <input type="password" name="senha" required>
+    <button type="submit">Entrar</button>
+  </form>
+</div>
+{% endblock %}

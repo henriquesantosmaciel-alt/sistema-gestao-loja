@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ cliente.nome }}{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>{{ cliente.nome }}</h1>
+  <p class="muted">{{ cliente.telefone or '-' }} · {{ cliente.email or '-' }}</p>
+</header>
+
+<section class="card">
+  <h2>Historico de compras</h2>
+  <table class="table">
+    <thead><tr><th>Venda</th><th>Data</th><th>Total</th><th>Pagamento</th></tr></thead>
+    <tbody>
+    {% for h in historico %}
+      <tr>
+        <td>#{{ h.id }}</td>
+        <td>{{ h.data }}</td>
+        <td>R$ {{ "%.2f"|format(h.total) }}</td>
+        <td>{{ h.forma_pagamento }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">Nenhuma compra registrada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+<a class="link" href="{{ url_for('pagina_clientes') }}">&larr; Voltar</a>
+{% endblock %}

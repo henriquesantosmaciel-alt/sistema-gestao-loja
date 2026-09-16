@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Fornecedores{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Fornecedores e compras</h1>
+  <p class="muted">Controle de fornecedores e reposicao de estoque via compras</p>
+</header>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Novo fornecedor</h2>
+    <form method="post" action="{{ url_for('novo_fornecedor') }}" class="form-grid">
+      <input type="text" name="nome" placeholder="Nome" required>
+      <input type="text" name="telefone" placeholder="Telefone">
+      <input type="email" name="email" placeholder="Email">
+      <input type="text" name="cnpj" placeholder="CNPJ">
+      <button type="submit">Cadastrar</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Registrar compra</h2>
+    <form method="post" action="{{ url_for('nova_compra') }}" class="form-grid">
+      <select name="produto_id" required>
+        {% for p in produtos %}
+          <option value="{{ p.id }}">{{ p.nome }}</option>
+        {% endfor %}
+      </select>
+      <select name="fornecedor_id">
+        <option value="">Sem fornecedor</option>
+        {% for f in fornecedores %}
+          <option value="{{ f.id }}">{{ f.nome }}</option>
+        {% endfor %}
+      </select>
+      <input type="number" name="quantidade" placeholder="Quantidade" required>
+      <input type="number" step="0.01" name="preco_unitario" placeholder="Preco unitario" required>
+      <button type="submit">Registrar compra</button>
+    </form>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Fornecedores cadastrados</h2>
+  <table class="table">
+    <thead><tr><th>Nome</th><th>Telefone</th><th>Email</th><th>CNPJ</th></tr></thead>
+    <tbody>
+    {% for f in fornecedores %}
+      <tr><td>{{ f.nome }}</td><td>{{ f.telefone or '-' }}</td><td>{{ f.email or '-' }}</td><td>{{ f.cnpj or '-' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Historico de compras</h2>
+  <table class="table">
+    <thead><tr><th>Produto</th><th>Fornecedor</th><th>Qtd</th><th>Unitario</th><th>Data</th></tr></thead>
+    <tbody>
+    {% for c in compras %}
+      <tr>
+        <td>{{ c.produto_nome }}</td>
+        <td>{{ c.fornecedor_nome or '-' }}</td>
+        <td>{{ c.quantidade }}</td>
+        <td>R$ {{ "%.2f"|format(c.preco_unitario) }}</td>
+        <td>{{ c.data }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

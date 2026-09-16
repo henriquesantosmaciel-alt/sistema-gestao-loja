@@ -1,6 +1,6 @@
 """
-database.py - Configuração e modelagem do banco de dados SQLite
-Sistema de Gestão de Loja
+database.py - Configuracao e modelagem do banco de dados SQLite
+Sistema de Gestao de Loja
 """
 import sqlite3
 from contextlib import contextmanager
@@ -78,6 +78,40 @@ def inicializar_banco():
             descricao TEXT,
             valor REAL NOT NULL,
             data TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fornecedores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            telefone TEXT,
+            email TEXT,
+            cnpj TEXT,
+            criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS compras (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fornecedor_id INTEGER,
+            produto_id INTEGER NOT NULL,
+            quantidade INTEGER NOT NULL,
+            preco_unitario REAL NOT NULL,
+            data TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (fornecedor_id) REFERENCES fornecedores (id),
+            FOREIGN KEY (produto_id) REFERENCES produtos (id)
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            senha_hash TEXT NOT NULL,
+            nome TEXT,
+            criado_em TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """)
 

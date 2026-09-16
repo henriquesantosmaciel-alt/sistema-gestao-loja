@@ -1,2 +1,2 @@
-# Este projeto utiliza apenas bibliotecas padrão do Python (sqlite3, datetime, contextlib).
-# Nenhuma dependência externa é necessária para a versão CLI.
+Flask>=3.0.0
+reportlab>=4.0.0
