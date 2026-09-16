@@ -1,25 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Venda #{{ venda.id }}{% endblock %}
 {% block content %}
-<header class="page-header">
-  <h1>Venda #{{ venda.id }}</h1>
-  <p class="muted">{{ venda.data }} &middot; {{ venda.forma_pagamento }} &middot; {{ venda.cliente_nome or 'Consumidor final' }}</p>
-</header>
-
+<header class="page-header"><h1>Venda #{{ venda.id }}</h1><p class="muted">{{ venda.data }} &middot; {{ venda.forma_pagamento }} &middot; {{ venda.cliente_nome or 'Consumidor final' }}</p></header>
 <section class="card">
-  <table class="table">
-    <thead><tr><th>Produto</th><th>Qtd</th><th>Unitario</th><th>Subtotal</th></tr></thead>
-    <tbody>
-    {% for item in itens %}
-      <tr>
-        <td>{{ item.produto_nome }}</td>
-        <td>{{ item.quantidade }}</td>
-        <td>R$ {{ "%.2f"|format(item.preco_unitario) }}</td>
-        <td>R$ {{ "%.2f"|format(item.subtotal) }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th>Unitario</th><th>Subtotal</th></tr></thead><tbody>{% for item in itens %}<tr><td>{{ item.produto_nome }}</td><td>{{ item.quantidade }}</td><td>R$ {{ "%.2f"|format(item.preco_unitario) }}</td><td>R$ {{ "%.2f"|format(item.subtotal) }}</td></tr>{% endfor %}</tbody></table></div>
   <h2 style="margin-top:16px;">Total: R$ {{ "%.2f"|format(venda.total) }}</h2>
   <a class="btn-small" href="{{ url_for('recibo_venda', venda_id=venda.id) }}">Baixar recibo PDF</a>
 </section>

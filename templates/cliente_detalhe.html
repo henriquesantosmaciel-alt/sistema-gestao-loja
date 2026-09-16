@@ -7,44 +7,29 @@
 </header>
 
 <section class="cards-grid">
-  <div class="card stat">
-    <span class="stat-label">Compras concluidas</span>
-    <span class="stat-value">{{ stats.qtd_compras }}</span>
-  </div>
-  <div class="card stat">
-    <span class="stat-label">Total gasto</span>
-    <span class="stat-value">R$ {{ "%.2f"|format(stats.total_gasto) }}</span>
-  </div>
-  <div class="card stat">
-    <span class="stat-label">Ticket medio</span>
-    <span class="stat-value">R$ {{ "%.2f"|format(stats.ticket_medio) }}</span>
-  </div>
+  <div class="card stat"><span class="stat-label">Compras concluidas</span><span class="stat-value">{{ stats.qtd_compras }}</span></div>
+  <div class="card stat"><span class="stat-label">Total gasto</span><span class="stat-value">R$ {{ "%.2f"|format(stats.total_gasto) }}</span></div>
+  <div class="card stat"><span class="stat-label">Ticket medio</span><span class="stat-value">R$ {{ "%.2f"|format(stats.ticket_medio) }}</span></div>
 </section>
 
 <section class="card">
   <h2>Historico de compras</h2>
-  <table class="table">
-    <thead><tr><th>Venda</th><th>Data</th><th>Total</th><th>Pagamento</th><th>Status</th></tr></thead>
-    <tbody>
-    {% for h in historico %}
-      <tr>
-        <td><a class="link" href="{{ url_for('detalhe_venda', venda_id=h.id) }}">#{{ h.id }}</a></td>
-        <td>{{ h.data }}</td>
-        <td>R$ {{ "%.2f"|format(h.total) }}</td>
-        <td>{{ h.forma_pagamento }}</td>
-        <td>
-          {% if h.status == 'cancelada' %}
-            <span class="badge badge-warning">Cancelada</span>
-          {% else %}
-            <span class="badge badge-ok">Concluida</span>
-          {% endif %}
-        </td>
-      </tr>
-    {% else %}
-      <tr><td colspan="5" class="muted">Nenhuma compra registrada.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Venda</th><th>Data</th><th>Total</th><th>Pagamento</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for h in historico %}
+        <tr>
+          <td><a class="link" href="{{ url_for('detalhe_venda', venda_id=h.id) }}">#{{ h.id }}</a></td>
+          <td>{{ h.data }}</td><td>R$ {{ "%.2f"|format(h.total) }}</td><td>{{ h.forma_pagamento }}</td>
+          <td>{% if h.status == 'cancelada' %}<span class="badge badge-warning">Cancelada</span>{% else %}<span class="badge badge-ok">Concluida</span>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">Nenhuma compra registrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 <a class="link" href="{{ url_for('pagina_clientes') }}">&larr; Voltar</a>
 {% endblock %}

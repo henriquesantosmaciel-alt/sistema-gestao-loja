@@ -64,20 +64,17 @@ new Chart(document.getElementById('graficoVendas'), {
   data: {
     labels: dias,
     datasets: [{
-      label: 'Faturamento (R$)',
-      data: totais,
-      borderColor: '#6c8cff',
-      backgroundColor: 'rgba(108,140,255,0.15)',
-      tension: 0.35,
-      fill: true,
-      pointRadius: 3,
+      label: 'Faturamento (R$)', data: totais,
+      borderColor: '#6c8cff', backgroundColor: 'rgba(108,140,255,0.15)',
+      tension: 0.35, fill: true, pointRadius: 3
     }]
   },
   options: {
+    responsive: true,
     plugins: { legend: { display: false } },
     scales: {
       x: { grid: { color: '#2a2d3a' }, ticks: { color: '#9ca3af' } },
-      y: { grid: { color: '#2a2d3a' }, ticks: { color: '#9ca3af' } }
+      y: { grid: { color: '#2a2d3a' }, ticks: { color: '#9ca3af' }, beginAtZero: true }
     }
   }
 });
