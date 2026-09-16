@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Fiscal{% endblock %}
+{% block content %}
+<header class="page-header"><h1>Fiscal</h1><p class="muted">Area de homologacao. Nenhuma nota emitida aqui possui valor fiscal real</p></header>
+
+<div class="flash flash-erro" style="margin-bottom:24px;">
+  Este modulo opera apenas em <strong>homologacao</strong>. Para emitir NF-e/NFC-e reais, e necessario CNPJ regular, Inscricao Estadual, credenciamento na SEFAZ e certificado digital A1/A3, alem de integrar uma API fiscal habilitada.
+</div>
+
+<section class="card">
+  <h2>Dados da empresa</h2>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="razao_social" placeholder="Razao social" value="{{ empresa.razao_social or '' }}">
+    <input type="text" name="nome_fantasia" placeholder="Nome fantasia" value="{{ empresa.nome_fantasia or '' }}">
+    <input type="text" name="cnpj" placeholder="CNPJ" value="{{ empresa.cnpj or '' }}">
+    <input type="text" name="inscricao_estadual" placeholder="Inscricao estadual" value="{{ empresa.inscricao_estadual or '' }}">
+    <input type="text" name="endereco" placeholder="Endereco" value="{{ empresa.endereco or '' }}">
+    <input type="text" name="cidade" placeholder="Cidade" value="{{ empresa.cidade or '' }}">
+    <input type="text" name="uf" placeholder="UF" maxlength="2" value="{{ empresa.uf or '' }}">
+    <input type="text" name="cep" placeholder="CEP" value="{{ empresa.cep or '' }}">
+    <select name="regime_tributario">
+      <option value="Simples Nacional" {{ 'selected' if empresa.regime_tributario=='Simples Nacional' }}>Simples Nacional</option>
+      <option value="Lucro Presumido" {{ 'selected' if empresa.regime_tributario=='Lucro Presumido' }}>Lucro Presumido</option>
+      <option value="Lucro Real" {{ 'selected' if empresa.regime_tributario=='Lucro Real' }}>Lucro Real</option>
+    </select>
+    <select name="ambiente_fiscal">
+      <option value="homologacao" {{ 'selected' if empresa.ambiente_fiscal=='homologacao' }}>Homologacao</option>
+      <option value="producao" disabled>Producao (requer integracao externa)</option>
+    </select>
+    <button type="submit">Salvar dados</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Gerar documento de homologacao para uma venda</h2>
+  <div class="table-wrap"><table class="table"><thead><tr><th>Venda</th><th>Total</th><th>Acao</th></tr></thead><tbody>
+  {% for v in vendas_recentes %}
+    <tr><td>#{{ v.id }}</td><td>R$ {{ "%.2f"|format(v.total) }}</td>
+      <td class="actions">
+        <form method="post" action="{{ url_for('gerar_nota_homologacao', venda_id=v.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select name="tipo"><option value="NFC-e">NFC-e</option><option value="NF-e">NF-e</option></select>
+          <button type="submit" class="btn-small">Gerar homologacao</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="3" class="muted">Nenhuma venda recente.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2>Documentos gerados (homologacao)</h2>
+  <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Venda</th><th>Tipo</th><th>Status</th><th>Criado em</th></tr></thead><tbody>
+  {% for n in notas %}<tr><td>{{ n.id }}</td><td>#{{ n.venda_id }}</td><td>{{ n.tipo }}</td><td><span class="badge badge-warning">{{ n.status }}</span></td><td>{{ n.criado_em }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Nenhum documento gerado ainda.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

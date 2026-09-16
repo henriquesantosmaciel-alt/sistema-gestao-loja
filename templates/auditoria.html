@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+<header class="page-header"><h1>Auditoria e backup</h1><p class="muted">Historico de acoes e copia de seguranca do banco</p></header>
+<section class="card">
+  <h2>Backup do banco de dados</h2>
+  <form method="post" action="{{ url_for('gerar_backup') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Gerar backup agora</button>
+  </form>
+  <p class="muted" style="margin-top:10px;">O backup e salvo na pasta <code>backups/</code> no servidor onde o sistema esta rodando.</p>
+</section>
+<section class="card">
+  <h2>Ultimas acoes registradas</h2>
+  <div class="table-wrap"><table class="table"><thead><tr><th>Data</th><th>Usuario</th><th>Acao</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody>
+  {% for r in registros %}<tr><td>{{ r.criado_em }}</td><td>{{ r.usuario or '-' }}</td><td>{{ r.acao }}</td><td>{{ r.entidade }}{% if r.entidade_id %} #{{ r.entidade_id }}{% endif %}</td><td>{{ r.detalhes or '-' }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Nenhum registro de auditoria ainda.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}
