@@ -99,6 +99,21 @@ def inicializar_banco():
         """)
 
         cursor.execute("""
+        CREATE TABLE IF NOT EXISTS caixas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT NOT NULL,
+            abertura TEXT DEFAULT CURRENT_TIMESTAMP,
+            fechamento TEXT,
+            saldo_inicial REAL NOT NULL DEFAULT 0,
+            saldo_final_informado REAL,
+            saldo_esperado REAL,
+            diferenca REAL,
+            status TEXT NOT NULL DEFAULT 'aberto',
+            observacao TEXT
+        )
+        """)
+
+        cursor.execute("""
         CREATE TABLE IF NOT EXISTS movimentacoes_caixa (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             caixa_id INTEGER,
@@ -146,21 +161,6 @@ def inicializar_banco():
             papel TEXT NOT NULL DEFAULT 'admin',
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS caixas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario TEXT NOT NULL,
-            abertura TEXT DEFAULT CURRENT_TIMESTAMP,
-            fechamento TEXT,
-            saldo_inicial REAL NOT NULL DEFAULT 0,
-            saldo_final_informado REAL,
-            saldo_esperado REAL,
-            diferenca REAL,
-            status TEXT NOT NULL DEFAULT 'aberto',
-            observacao TEXT
         )
         """)
 
@@ -249,12 +249,9 @@ def inicializar_banco():
         )
         """)
 
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_data ON vendas (data)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_produtos_nome ON produtos (nome)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_venda_venda ON itens_venda (venda_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mov_caixa ON movimentacoes_caixa (caixa_id, data)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_contas_status ON contas_financeiras (status, vencimento)")
-
+        # IMPORTANTE: migracoes de colunas ANTES de criar indices que as usam,
+        # pois tabelas antigas (criadas em versoes anteriores) podem nao ter
+        # essas colunas ainda quando "CREATE TABLE IF NOT EXISTS" e ignorado.
         _add_column(conn, "produtos", "sku", "TEXT")
         _add_column(conn, "produtos", "codigo_barras", "TEXT")
         _add_column(conn, "produtos", "marca", "TEXT")
@@ -269,11 +266,22 @@ def inicializar_banco():
         _add_column(conn, "clientes", "endereco", "TEXT")
         _add_column(conn, "clientes", "limite_credito", "REAL DEFAULT 0")
         _add_column(conn, "clientes", "observacoes", "TEXT")
+        _add_column(conn, "vendas", "status", "TEXT DEFAULT 'concluida'")
+        _add_column(conn, "vendas", "vendedor", "TEXT")
         _add_column(conn, "vendas", "caixa_id", "INTEGER")
         _add_column(conn, "fornecedores", "endereco", "TEXT")
         _add_column(conn, "fornecedores", "prazo_pagamento", "INTEGER DEFAULT 0")
         _add_column(conn, "movimentacoes_caixa", "caixa_id", "INTEGER")
         _add_column(conn, "movimentacoes_caixa", "usuario", "TEXT")
+        _add_column(conn, "usuarios", "papel", "TEXT DEFAULT 'admin'")
+        _add_column(conn, "usuarios", "ativo", "INTEGER DEFAULT 1")
+
+        # Indices - criados DEPOIS das migracoes de coluna
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_data ON vendas (data)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_produtos_nome ON produtos (nome)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_venda_venda ON itens_venda (venda_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mov_caixa ON movimentacoes_caixa (caixa_id, data)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_contas_status ON contas_financeiras (status, vencimento)")
 
         cursor.execute("INSERT OR IGNORE INTO empresa (id) VALUES (1)")
 
