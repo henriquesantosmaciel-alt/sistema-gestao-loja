@@ -1,26 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Relatorios{% endblock %}
 {% block content %}
-<header class="page-header">
-  <h1>Relatorios</h1>
-  <p class="muted">Analises gerenciais da loja</p>
-</header>
-
+<header class="page-header"><h1>Relatorios</h1><p class="muted">Analises gerenciais da loja</p></header>
 <section class="cards-grid">
-  <div class="card stat">
-    <span class="stat-label">Receita do mes</span>
-    <span class="stat-value">R$ {{ "%.2f"|format(lucro.receita) }}</span>
-  </div>
-  <div class="card stat">
-    <span class="stat-label">Custo do mes</span>
-    <span class="stat-value">R$ {{ "%.2f"|format(lucro.custo) }}</span>
-  </div>
-  <div class="card stat">
-    <span class="stat-label">Lucro do mes</span>
-    <span class="stat-value">R$ {{ "%.2f"|format(lucro.lucro) }}</span>
-  </div>
+  <div class="card stat"><span class="stat-label">Receita do mes</span><span class="stat-value">R$ {{ "%.2f"|format(lucro.receita) }}</span></div>
+  <div class="card stat"><span class="stat-label">Custo do mes</span><span class="stat-value">R$ {{ "%.2f"|format(lucro.custo) }}</span></div>
+  <div class="card stat"><span class="stat-label">Lucro do mes</span><span class="stat-value">R$ {{ "%.2f"|format(lucro.lucro) }}</span></div>
 </section>
-
 <section class="card">
   <h2>Exportar vendas (CSV)</h2>
   <form method="get" action="{{ url_for('exportar_relatorio') }}" class="form-grid">
@@ -29,64 +15,12 @@
     <button type="submit">Exportar CSV</button>
   </form>
 </section>
-
 <section class="grid-2">
-  <div class="card">
-    <h2>Produtos mais vendidos</h2>
-    <table class="table">
-      <thead><tr><th>Produto</th><th>Qtd vendida</th><th>Receita</th></tr></thead>
-      <tbody>
-      {% for p in mais_vendidos %}
-        <tr><td>{{ p.nome }}</td><td>{{ p.total_vendido }}</td><td>R$ {{ "%.2f"|format(p.receita) }}</td></tr>
-      {% else %}
-        <tr><td colspan="3" class="muted">Sem dados ainda.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <h2>Melhores clientes</h2>
-    <table class="table">
-      <thead><tr><th>Cliente</th><th>Compras</th><th>Total gasto</th></tr></thead>
-      <tbody>
-      {% for c in top_clientes %}
-        <tr><td>{{ c.nome }}</td><td>{{ c.qtd_compras }}</td><td>R$ {{ "%.2f"|format(c.total_gasto) }}</td></tr>
-      {% else %}
-        <tr><td colspan="3" class="muted">Sem dados ainda.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <div class="card"><h2>Produtos mais vendidos</h2><div class="table-wrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd vendida</th><th>Receita</th></tr></thead><tbody>{% for p in mais_vendidos %}<tr><td>{{ p.nome }}</td><td>{{ p.total_vendido }}</td><td>R$ {{ "%.2f"|format(p.receita) }}</td></tr>{% else %}<tr><td colspan="3" class="muted">Sem dados ainda.</td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="card"><h2>Melhores clientes</h2><div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Compras</th><th>Total gasto</th></tr></thead><tbody>{% for c in top_clientes %}<tr><td>{{ c.nome }}</td><td>{{ c.qtd_compras }}</td><td>R$ {{ "%.2f"|format(c.total_gasto) }}</td></tr>{% else %}<tr><td colspan="3" class="muted">Sem dados ainda.</td></tr>{% endfor %}</tbody></table></div></div>
 </section>
-
 <section class="grid-2">
-  <div class="card">
-    <h2>Vendas por forma de pagamento</h2>
-    <table class="table">
-      <thead><tr><th>Forma</th><th>Qtd</th><th>Total</th></tr></thead>
-      <tbody>
-      {% for f in formas_pagamento %}
-        <tr><td>{{ f.forma_pagamento or '-' }}</td><td>{{ f.qtd }}</td><td>R$ {{ "%.2f"|format(f.total) }}</td></tr>
-      {% else %}
-        <tr><td colspan="3" class="muted">Sem dados ainda.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <h2>Estoque critico</h2>
-    <table class="table">
-      <thead><tr><th>Produto</th><th>Qtd</th><th>Minimo</th></tr></thead>
-      <tbody>
-      {% for p in estoque_critico %}
-        <tr><td>{{ p.nome }}</td><td><span class="badge badge-warning">{{ p.quantidade }}</span></td><td>{{ p.estoque_minimo }}</td></tr>
-      {% else %}
-        <tr><td colspan="3" class="muted">Nenhum produto critico.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <div class="card"><h2>Vendas por forma de pagamento</h2><div class="table-wrap"><table class="table"><thead><tr><th>Forma</th><th>Qtd</th><th>Total</th></tr></thead><tbody>{% for f in formas_pagamento %}<tr><td>{{ f.forma_pagamento or '-' }}</td><td>{{ f.qtd }}</td><td>R$ {{ "%.2f"|format(f.total) }}</td></tr>{% else %}<tr><td colspan="3" class="muted">Sem dados ainda.</td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="card"><h2>Estoque critico</h2><div class="table-wrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th>Minimo</th></tr></thead><tbody>{% for p in estoque_critico %}<tr><td>{{ p.nome }}</td><td><span class="badge badge-warning">{{ p.quantidade }}</span></td><td>{{ p.estoque_minimo }}</td></tr>{% else %}<tr><td colspan="3" class="muted">Nenhum produto critico.</td></tr>{% endfor %}</tbody></table></div></div>
 </section>
 {% endblock %}
