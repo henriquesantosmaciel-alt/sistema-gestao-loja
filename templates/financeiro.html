@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block content %}
+<header class="page-header"><h1>Financeiro</h1><p class="muted">Contas a pagar, a receber e visao geral</p></header>
+
+<section class="cards-grid">
+  <div class="card stat"><span class="stat-label">A pagar (em aberto)</span><span class="stat-value">R$ {{ "%.2f"|format(resumo.a_pagar) }}</span></div>
+  <div class="card stat"><span class="stat-label">A receber (em aberto)</span><span class="stat-value">R$ {{ "%.2f"|format(resumo.a_receber) }}</span></div>
+  <div class="card stat"><span class="stat-label">Contas vencidas</span><span class="stat-value">{{ resumo.vencidas }}</span></div>
+</section>
+
+<section class="card">
+  <h2>Nova conta</h2>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <select name="tipo" required>
+      <option value="pagar">A pagar</option>
+      <option value="receber">A receber</option>
+    </select>
+    <input type="text" name="descricao" placeholder="Descricao" required maxlength="200">
+    <input type="text" name="categoria" placeholder="Categoria (ex: aluguel, fornecedor)">
+    <input type="text" name="entidade" placeholder="Cliente/fornecedor (opcional)">
+    <input type="number" step="0.01" min="0.01" name="valor" placeholder="Valor (R$)" required>
+    <input type="date" name="vencimento">
+    <button type="submit">Registrar</button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-header-row">
+    <h2>Contas</h2>
+    <form method="get" class="search-form">
+      <select name="status">
+        <option value="aberta" {{ 'selected' if filtro=='aberta' }}>Em aberto</option>
+        <option value="paga" {{ 'selected' if filtro=='paga' }}>Pagas</option>
+        <option value="todas" {{ 'selected' if filtro=='todas' }}>Todas</option>
+      </select>
+      <button type="submit" class="btn-secondary">Filtrar</button>
+    </form>
+  </div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Tipo</th><th>Descricao</th><th>Categoria</th><th>Entidade</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Acoes</th></tr></thead>
+    <tbody>
+    {% for c in contas %}
+      <tr>
+        <td><span class="badge {{ 'badge-warning' if c.tipo=='pagar' else 'badge-ok' }}">{{ 'A pagar' if c.tipo=='pagar' else 'A receber' }}</span></td>
+        <td>{{ c.descricao }}</td><td>{{ c.categoria or '-' }}</td><td>{{ c.entidade or '-' }}</td>
+        <td>R$ {{ "%.2f"|format(c.valor) }}</td><td>{{ c.vencimento or '-' }}</td>
+        <td>{% if c.situacao == 'vencida' %}<span class="badge badge-warning">Vencida</span>{% elif c.situacao == 'paga' %}<span class="badge badge-ok">Paga</span>{% else %}<span class="badge badge-ok">Aberta</span>{% endif %}</td>
+        <td class="actions">
+          {% if c.status == 'aberta' %}
+          <form method="post" action="{{ url_for('baixar_conta', conta_id=c.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-small">Baixar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">Nenhuma conta encontrada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Pedidos e orcamentos{% endblock %}
+{% block content %}
+<header class="page-header"><h1>Pedidos e orcamentos</h1><p class="muted">Crie orcamentos e converta em vendas quando o cliente aprovar</p></header>
+
+<section class="card">
+  <h2>Novo pedido/orcamento</h2>
+  {% if produtos %}
+  <form method="post" id="form-pedido">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="itens-pedido">
+      <div class="venda-item">
+        <select name="produto_id" required>{% for p in produtos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select>
+        <input type="number" name="quantidade" min="1" value="1" required>
+        <button type="button" class="btn-remove-item">&times;</button>
+      </div>
+    </div>
+    <button type="button" id="add-item" class="btn-secondary">+ Adicionar item</button>
+    <div class="form-grid" style="margin-top:16px;">
+      <select name="cliente_id"><option value="">Cliente (opcional)</option>{% for c in clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select>
+      <select name="tipo"><option value="orcamento">Orcamento</option><option value="pedido">Pedido</option></select>
+      <input type="date" name="validade" placeholder="Validade">
+      <input type="text" name="observacao" placeholder="Observacao">
+      <button type="submit">Salvar</button>
+    </div>
+  </form>
+  {% else %}<p class="muted">Cadastre um produto antes de criar pedidos.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Pedidos e orcamentos registrados</h2>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>ID</th><th>Tipo</th><th>Cliente</th><th>Total</th><th>Status</th><th>Criado em</th><th>Acoes</th></tr></thead>
+    <tbody>
+    {% for p in pedidos %}
+      <tr>
+        <td><a class="link" href="{{ url_for('detalhe_pedido', pedido_id=p.id) }}">#{{ p.id }}</a></td>
+        <td>{{ 'Orcamento' if p.tipo=='orcamento' else 'Pedido' }}</td>
+        <td>{{ p.cliente_nome }}</td><td>R$ {{ "%.2f"|format(p.total) }}</td>
+        <td><span class="badge {{ 'badge-ok' if p.status=='convertido' else ('badge-warning' if p.status=='cancelado' else 'badge-ok') }}">{{ p.status }}</span></td>
+        <td>{{ p.criado_em }}</td>
+        <td class="actions">
+          {% if p.status == 'aberto' %}
+          <form method="post" action="{{ url_for('converter_pedido', pedido_id=p.id) }}" onsubmit="return confirm('Converter em venda?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-small">Converter</button>
+          </form>
+          <form method="post" action="{{ url_for('cancelar_pedido', pedido_id=p.id) }}" onsubmit="return confirm('Cancelar pedido?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-small btn-danger">Cancelar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">Nenhum pedido encontrado.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+<script>
+document.getElementById('add-item')?.addEventListener('click', () => {
+  const c = document.getElementById('itens-pedido'); const clone = c.firstElementChild.cloneNode(true); clone.querySelector('input').value = 1; c.appendChild(clone);
+});
+document.getElementById('itens-pedido')?.addEventListener('click', (e) => {
+  if (e.target.classList.contains('btn-remove-item') && document.getElementById('itens-pedido').children.length > 1) e.target.closest('.venda-item').remove();
+});
+</script>
+{% endblock %}

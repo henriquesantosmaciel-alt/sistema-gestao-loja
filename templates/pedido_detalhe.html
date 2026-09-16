@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Pedido #{{ pedido.id }}{% endblock %}
+{% block content %}
+<header class="page-header"><h1>{{ 'Orcamento' if pedido.tipo=='orcamento' else 'Pedido' }} #{{ pedido.id }}</h1><p class="muted">{{ pedido.cliente_nome }} &middot; {{ pedido.criado_em }} &middot; Status: {{ pedido.status }}</p></header>
+<section class="card">
+  <div class="table-wrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th>Unitario</th><th>Subtotal</th></tr></thead><tbody>
+  {% for i in itens %}<tr><td>{{ i.produto_nome }}</td><td>{{ i.quantidade }}</td><td>R$ {{ "%.2f"|format(i.preco_unitario) }}</td><td>R$ {{ "%.2f"|format(i.subtotal) }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <h2 style="margin-top:16px;">Total: R$ {{ "%.2f"|format(pedido.total) }}</h2>
+</section>
+<a class="link" href="{{ url_for('pagina_pedidos') }}">&larr; Voltar</a>
+{% endblock %}
