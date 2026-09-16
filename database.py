@@ -3,19 +3,31 @@ database.py - Configuracao e modelagem do banco de dados SQLite
 Sistema de Gestao de Loja
 """
 import sqlite3
+import logging
 from contextlib import contextmanager
 
-DB_NAME = "loja.db"
+from config import DB_NAME
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("lojaos.database")
+
+
+class DatabaseError(Exception):
+    """Erro de acesso ao banco de dados."""
 
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
         conn.commit()
+    except sqlite3.Error as exc:
+        conn.rollback()
+        logger.error("Erro no banco de dados: %s", exc)
+        raise DatabaseError(str(exc)) from exc
     finally:
         conn.close()
 
@@ -29,10 +41,11 @@ def inicializar_banco():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             categoria TEXT,
-            preco_custo REAL NOT NULL DEFAULT 0,
-            preco_venda REAL NOT NULL,
-            quantidade INTEGER NOT NULL DEFAULT 0,
-            estoque_minimo INTEGER NOT NULL DEFAULT 5,
+            preco_custo REAL NOT NULL DEFAULT 0 CHECK (preco_custo >= 0),
+            preco_venda REAL NOT NULL CHECK (preco_venda >= 0),
+            quantidade INTEGER NOT NULL DEFAULT 0 CHECK (quantidade >= 0),
+            estoque_minimo INTEGER NOT NULL DEFAULT 5 CHECK (estoque_minimo >= 0),
+            ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """)
@@ -54,6 +67,8 @@ def inicializar_banco():
             data TEXT DEFAULT CURRENT_TIMESTAMP,
             total REAL NOT NULL DEFAULT 0,
             forma_pagamento TEXT,
+            status TEXT NOT NULL DEFAULT 'concluida',
+            vendedor TEXT,
             FOREIGN KEY (cliente_id) REFERENCES clientes (id)
         )
         """)
@@ -111,11 +126,17 @@ def inicializar_banco():
             username TEXT UNIQUE NOT NULL,
             senha_hash TEXT NOT NULL,
             nome TEXT,
+            papel TEXT NOT NULL DEFAULT 'admin',
+            ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """)
 
-    print("Banco de dados inicializado com sucesso.")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_data ON vendas (data)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_produtos_nome ON produtos (nome)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_venda_venda ON itens_venda (venda_id)")
+
+    logger.info("Banco de dados inicializado com sucesso em %s", DB_NAME)
 
 
 if __name__ == "__main__":

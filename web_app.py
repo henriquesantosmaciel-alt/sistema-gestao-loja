@@ -1,34 +1,84 @@
 """
 web_app.py - Interface web (Flask) do Sistema de Gestao de Loja
-Dashboard moderno e minimalista para gerenciar estoque, vendas, clientes,
-fornecedores e relatorios.
+Dashboard moderno e minimalista, com autenticacao, controle de papeis
+(admin/vendedor), protecao CSRF e tratamento de erros consistente.
 """
 from datetime import date
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from functools import wraps
 
-from database import inicializar_banco
+from flask import (
+    Flask, render_template, request, redirect, url_for,
+    flash, session, send_file, jsonify
+)
+from flask_wtf import CSRFProtect
+
+import config
+from database import inicializar_banco, DatabaseError
 import estoque
 import clientes
 import vendas
 import fornecedores
 import relatorios
 import auth
+from validators import ValidationError
 from recibo import gerar_recibo_pdf
 
 app = Flask(__name__)
-app.secret_key = "troque-esta-chave-em-producao"
+app.config["SECRET_KEY"] = config.SECRET_KEY
+app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
+app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE
+app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
+
+csrf = CSRFProtect(app)
+
+
+@app.errorhandler(ValidationError)
+def handle_validation_error(erro):
+    flash(str(erro), "erro")
+    return redirect(request.referrer or url_for("dashboard"))
+
+
+@app.errorhandler(DatabaseError)
+def handle_database_error(erro):
+    flash("Ocorreu um erro ao acessar o banco de dados. Tente novamente.", "erro")
+    return redirect(request.referrer or url_for("dashboard"))
+
+
+@app.errorhandler(404)
+def handle_404(erro):
+    return render_template("erro.html", codigo=404, mensagem="Pagina nao encontrada."), 404
+
+
+@app.errorhandler(500)
+def handle_500(erro):
+    return render_template("erro.html", codigo=500, mensagem="Erro interno do servidor."), 500
 
 
 def login_necessario(func):
-    from functools import wraps
-
     @wraps(func)
     def wrapper(*args, **kwargs):
         if auth.usuario_existe() and "usuario" not in session:
             return redirect(url_for("login"))
         return func(*args, **kwargs)
-
     return wrapper
+
+
+def permissao_necessaria(area):
+    def decorador(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            papel = session.get("papel", "admin")
+            if not auth.tem_permissao(papel, area):
+                flash("Voce nao tem permissao para acessar esta area.", "erro")
+                return redirect(url_for("dashboard"))
+            return func(*args, **kwargs)
+        return wrapper
+    return decorador
+
+
+@app.context_processor
+def inject_globals():
+    return {"papel_usuario": session.get("papel", "admin")}
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -37,9 +87,10 @@ def login():
         return redirect(url_for("registrar"))
 
     if request.method == "POST":
-        usuario = auth.autenticar(request.form["username"], request.form["senha"])
+        usuario = auth.autenticar(request.form.get("username", ""), request.form.get("senha", ""))
         if usuario:
             session["usuario"] = usuario["username"]
+            session["papel"] = usuario["papel"]
             return redirect(url_for("dashboard"))
         flash("Usuario ou senha invalidos.", "erro")
     return render_template("login.html")
@@ -51,17 +102,21 @@ def registrar():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        auth.criar_usuario(
-            request.form["username"], request.form["senha"], request.form.get("nome")
-        )
-        flash("Usuario criado! Faca login.", "sucesso")
-        return redirect(url_for("login"))
+        try:
+            auth.criar_usuario(
+                request.form["username"], request.form["senha"],
+                request.form.get("nome"), papel="admin",
+            )
+            flash("Usuario administrador criado! Faca login.", "sucesso")
+            return redirect(url_for("login"))
+        except ValidationError as e:
+            flash(str(e), "erro")
     return render_template("registrar.html")
 
 
 @app.route("/logout")
 def logout():
-    session.pop("usuario", None)
+    session.clear()
     return redirect(url_for("login"))
 
 
@@ -71,31 +126,36 @@ def dashboard():
     resumo = relatorios.resumo_dashboard()
     vendas_semana = relatorios.vendas_por_dia(7)
     estoque_critico = relatorios.relatorio_estoque_critico()
+    valor_estoque = estoque.valor_total_estoque()
     return render_template(
         "dashboard.html",
         resumo=resumo,
         vendas_semana=vendas_semana,
         estoque_critico=estoque_critico,
+        valor_estoque=valor_estoque,
     )
 
 
 @app.route("/estoque")
 @login_necessario
+@permissao_necessaria("estoque")
 def pagina_estoque():
-    produtos = estoque.listar_produtos()
-    return render_template("estoque.html", produtos=produtos)
+    busca = request.args.get("q", "").strip()
+    produtos = estoque.listar_produtos(busca=busca or None)
+    return render_template("estoque.html", produtos=produtos, busca=busca)
 
 
 @app.route("/estoque/novo", methods=["POST"])
 @login_necessario
+@permissao_necessaria("estoque")
 def novo_produto():
     estoque.cadastrar_produto(
-        nome=request.form["nome"],
+        nome=request.form.get("nome"),
         categoria=request.form.get("categoria"),
-        preco_custo=float(request.form.get("preco_custo") or 0),
-        preco_venda=float(request.form["preco_venda"]),
-        quantidade=int(request.form.get("quantidade") or 0),
-        estoque_minimo=int(request.form.get("estoque_minimo") or 5),
+        preco_custo=request.form.get("preco_custo") or 0,
+        preco_venda=request.form.get("preco_venda"),
+        quantidade=request.form.get("quantidade") or 0,
+        estoque_minimo=request.form.get("estoque_minimo") or 5,
     )
     flash("Produto cadastrado com sucesso.", "sucesso")
     return redirect(url_for("pagina_estoque"))
@@ -103,14 +163,16 @@ def novo_produto():
 
 @app.route("/estoque/<int:produto_id>/repor", methods=["POST"])
 @login_necessario
+@permissao_necessaria("estoque")
 def repor_produto(produto_id):
-    estoque.repor_estoque(produto_id, int(request.form["quantidade"]))
+    estoque.repor_estoque(produto_id, request.form.get("quantidade"))
     flash("Estoque reposto.", "sucesso")
     return redirect(url_for("pagina_estoque"))
 
 
 @app.route("/estoque/<int:produto_id>/remover", methods=["POST"])
 @login_necessario
+@permissao_necessaria("estoque")
 def remover_produto(produto_id):
     estoque.remover_produto(produto_id)
     flash("Produto removido.", "sucesso")
@@ -119,16 +181,19 @@ def remover_produto(produto_id):
 
 @app.route("/clientes")
 @login_necessario
+@permissao_necessaria("clientes")
 def pagina_clientes():
-    lista = clientes.listar_clientes()
-    return render_template("clientes.html", clientes=lista)
+    busca = request.args.get("q", "").strip()
+    lista = clientes.listar_clientes(busca or None)
+    return render_template("clientes.html", clientes=lista, busca=busca)
 
 
 @app.route("/clientes/novo", methods=["POST"])
 @login_necessario
+@permissao_necessaria("clientes")
 def novo_cliente():
     clientes.cadastrar_cliente(
-        nome=request.form["nome"],
+        nome=request.form.get("nome"),
         telefone=request.form.get("telefone"),
         email=request.form.get("email"),
     )
@@ -138,14 +203,20 @@ def novo_cliente():
 
 @app.route("/clientes/<int:cliente_id>")
 @login_necessario
+@permissao_necessaria("clientes")
 def detalhe_cliente(cliente_id):
     cliente = clientes.buscar_cliente(cliente_id)
+    if not cliente:
+        flash("Cliente nao encontrado.", "erro")
+        return redirect(url_for("pagina_clientes"))
     historico = clientes.historico_compras(cliente_id)
-    return render_template("cliente_detalhe.html", cliente=cliente, historico=historico)
+    stats = clientes.estatisticas_cliente(cliente_id)
+    return render_template("cliente_detalhe.html", cliente=cliente, historico=historico, stats=stats)
 
 
 @app.route("/clientes/<int:cliente_id>/remover", methods=["POST"])
 @login_necessario
+@permissao_necessaria("clientes")
 def remover_cliente(cliente_id):
     clientes.remover_cliente(cliente_id)
     flash("Cliente removido.", "sucesso")
@@ -154,44 +225,52 @@ def remover_cliente(cliente_id):
 
 @app.route("/vendas")
 @login_necessario
+@permissao_necessaria("vendas")
 def pagina_vendas():
-    lista = vendas.listar_vendas()
+    busca = request.args.get("cliente", "").strip()
+    lista = vendas.listar_vendas(busca_cliente=busca or None)
     produtos = estoque.listar_produtos()
     lista_clientes = clientes.listar_clientes()
-    return render_template("vendas.html", vendas=lista, produtos=produtos, clientes=lista_clientes)
+    return render_template("vendas.html", vendas=lista, produtos=produtos, clientes=lista_clientes, busca=busca)
 
 
 @app.route("/vendas/nova", methods=["POST"])
 @login_necessario
+@permissao_necessaria("vendas")
 def nova_venda():
     produto_ids = request.form.getlist("produto_id")
     quantidades = request.form.getlist("quantidade")
     itens = [
-        {"produto_id": int(pid), "quantidade": int(qtd)}
+        {"produto_id": pid, "quantidade": qtd}
         for pid, qtd in zip(produto_ids, quantidades) if pid and qtd
     ]
     cliente_id = request.form.get("cliente_id") or None
     forma_pagamento = request.form.get("forma_pagamento") or "dinheiro"
 
-    try:
-        venda_id, total = vendas.registrar_venda(
-            itens, int(cliente_id) if cliente_id else None, forma_pagamento
-        )
-        flash(f"Venda #{venda_id} registrada. Total: R$ {total:.2f}", "sucesso")
-    except ValueError as e:
-        flash(str(e), "erro")
+    venda_id, total = vendas.registrar_venda(
+        itens,
+        int(cliente_id) if cliente_id else None,
+        forma_pagamento,
+        vendedor=session.get("usuario"),
+    )
+    flash(f"Venda #{venda_id} registrada. Total: R$ {total:.2f}", "sucesso")
     return redirect(url_for("pagina_vendas"))
 
 
 @app.route("/vendas/<int:venda_id>")
 @login_necessario
+@permissao_necessaria("vendas")
 def detalhe_venda(venda_id):
     venda, itens = vendas.detalhes_venda(venda_id)
+    if not venda:
+        flash("Venda nao encontrada.", "erro")
+        return redirect(url_for("pagina_vendas"))
     return render_template("venda_detalhe.html", venda=venda, itens=itens)
 
 
 @app.route("/vendas/<int:venda_id>/cancelar", methods=["POST"])
 @login_necessario
+@permissao_necessaria("vendas")
 def cancelar_venda(venda_id):
     vendas.cancelar_venda(venda_id)
     flash("Venda cancelada e estoque restaurado.", "sucesso")
@@ -200,13 +279,17 @@ def cancelar_venda(venda_id):
 
 @app.route("/vendas/<int:venda_id>/recibo")
 @login_necessario
+@permissao_necessaria("vendas")
 def recibo_venda(venda_id):
-    caminho = gerar_recibo_pdf(venda_id, f"/tmp/recibo_{venda_id}.pdf")
+    import tempfile, os
+    caminho = os.path.join(tempfile.gettempdir(), f"recibo_{venda_id}.pdf")
+    gerar_recibo_pdf(venda_id, caminho)
     return send_file(caminho, as_attachment=True, download_name=f"recibo_venda_{venda_id}.pdf")
 
 
 @app.route("/fornecedores")
 @login_necessario
+@permissao_necessaria("fornecedores")
 def pagina_fornecedores():
     lista = fornecedores.listar_fornecedores()
     compras = fornecedores.listar_compras()
@@ -216,9 +299,10 @@ def pagina_fornecedores():
 
 @app.route("/fornecedores/novo", methods=["POST"])
 @login_necessario
+@permissao_necessaria("fornecedores")
 def novo_fornecedor():
     fornecedores.cadastrar_fornecedor(
-        nome=request.form["nome"],
+        nome=request.form.get("nome"),
         telefone=request.form.get("telefone"),
         email=request.form.get("email"),
         cnpj=request.form.get("cnpj"),
@@ -229,11 +313,12 @@ def novo_fornecedor():
 
 @app.route("/fornecedores/compra", methods=["POST"])
 @login_necessario
+@permissao_necessaria("fornecedores")
 def nova_compra():
     fornecedores.registrar_compra(
         produto_id=int(request.form["produto_id"]),
-        quantidade=int(request.form["quantidade"]),
-        preco_unitario=float(request.form["preco_unitario"]),
+        quantidade=request.form.get("quantidade"),
+        preco_unitario=request.form.get("preco_unitario"),
         fornecedor_id=int(request.form["fornecedor_id"]) if request.form.get("fornecedor_id") else None,
     )
     flash("Compra registrada e estoque atualizado.", "sucesso")
@@ -242,6 +327,7 @@ def nova_compra():
 
 @app.route("/relatorios")
 @login_necessario
+@permissao_necessaria("relatorios")
 def pagina_relatorios():
     hoje = date.today().isoformat()
     inicio_mes = date.today().replace(day=1).isoformat()
@@ -250,6 +336,7 @@ def pagina_relatorios():
     lucro = relatorios.lucro_periodo(inicio_mes, hoje)
     estoque_critico = relatorios.relatorio_estoque_critico()
     vendas_semana = relatorios.vendas_por_dia(7)
+    formas_pagamento = relatorios.vendas_por_forma_pagamento()
     return render_template(
         "relatorios.html",
         mais_vendidos=mais_vendidos,
@@ -257,9 +344,68 @@ def pagina_relatorios():
         lucro=lucro,
         estoque_critico=estoque_critico,
         vendas_semana=vendas_semana,
+        formas_pagamento=formas_pagamento,
+        inicio_mes=inicio_mes,
+        hoje=hoje,
     )
+
+
+@app.route("/relatorios/exportar")
+@login_necessario
+@permissao_necessaria("relatorios")
+def exportar_relatorio():
+    inicio = request.args.get("inicio") or date.today().replace(day=1).isoformat()
+    fim = request.args.get("fim") or date.today().isoformat()
+    buffer = relatorios.exportar_vendas_csv(inicio, fim)
+    return app.response_class(
+        buffer.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename=vendas_{inicio}_a_{fim}.csv"},
+    )
+
+
+@app.route("/usuarios")
+@login_necessario
+@permissao_necessaria("usuarios")
+def pagina_usuarios():
+    lista = auth.listar_usuarios()
+    return render_template("usuarios.html", usuarios=lista)
+
+
+@app.route("/usuarios/novo", methods=["POST"])
+@login_necessario
+@permissao_necessaria("usuarios")
+def novo_usuario():
+    auth.criar_usuario(
+        request.form.get("username"),
+        request.form.get("senha"),
+        request.form.get("nome"),
+        request.form.get("papel", "vendedor"),
+    )
+    flash("Usuario criado com sucesso.", "sucesso")
+    return redirect(url_for("pagina_usuarios"))
+
+
+@app.route("/usuarios/<int:usuario_id>/desativar", methods=["POST"])
+@login_necessario
+@permissao_necessaria("usuarios")
+def desativar_usuario(usuario_id):
+    auth.desativar_usuario(usuario_id)
+    flash("Usuario desativado.", "sucesso")
+    return redirect(url_for("pagina_usuarios"))
+
+
+@app.route("/api/produto/<int:produto_id>")
+@login_necessario
+def api_produto(produto_id):
+    produto = estoque.buscar_produto(produto_id)
+    if not produto:
+        return jsonify({"erro": "nao encontrado"}), 404
+    return jsonify(dict(produto))
 
 
 if __name__ == "__main__":
     inicializar_banco()
-    app.run(debug=True)
+    if not auth.usuario_existe():
+        print("Nenhum usuario encontrado. Acesse /registrar para criar o administrador.")
+    app.run(debug=config.DEBUG)

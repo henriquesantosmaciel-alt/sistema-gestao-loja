@@ -1,17 +1,17 @@
 """
-recibo.py - Geracao de recibos em PDF para vendas
-Usa apenas reportlab.
+recibo.py - Geracao de recibos em PDF para vendas (reportlab)
 """
 from reportlab.lib.pagesizes import A5
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from vendas import detalhes_venda
+from validators import ValidationError
 
 
 def gerar_recibo_pdf(venda_id, caminho_saida=None):
     venda, itens = detalhes_venda(venda_id)
     if not venda:
-        raise ValueError("Venda nao encontrada.")
+        raise ValidationError("Venda nao encontrada.")
 
     caminho_saida = caminho_saida or f"recibo_venda_{venda_id}.pdf"
     largura, altura = A5
@@ -27,6 +27,8 @@ def gerar_recibo_pdf(venda_id, caminho_saida=None):
     c.drawString(15 * mm, y, f"Venda #{venda['id']}")
     y -= 6 * mm
     c.drawString(15 * mm, y, f"Data: {venda['data']}")
+    y -= 6 * mm
+    c.drawString(15 * mm, y, f"Cliente: {venda['cliente_nome'] or 'Consumidor final'}")
     y -= 6 * mm
     c.drawString(15 * mm, y, f"Forma de pagamento: {venda['forma_pagamento']}")
     y -= 10 * mm
