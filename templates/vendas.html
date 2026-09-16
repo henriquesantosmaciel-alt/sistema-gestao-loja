@@ -9,14 +9,16 @@
 <section class="card">
   <h2>Nova venda</h2>
   <form method="post" action="{{ url_for('nova_venda') }}" id="form-venda">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div id="itens-venda">
       <div class="venda-item">
-        <select name="produto_id">
+        <select name="produto_id" required>
           {% for p in produtos %}
             <option value="{{ p.id }}">{{ p.nome }} (estoque: {{ p.quantidade }})</option>
           {% endfor %}
         </select>
         <input type="number" name="quantidade" placeholder="Qtd" min="1" value="1" required>
+        <button type="button" class="btn-remove-item" title="Remover item">&times;</button>
       </div>
     </div>
     <button type="button" id="add-item" class="btn-secondary">+ Adicionar item</button>
@@ -32,6 +34,7 @@
         <option value="dinheiro">Dinheiro</option>
         <option value="cartao">Cartao</option>
         <option value="pix">Pix</option>
+        <option value="fiado">Fiado</option>
       </select>
       <button type="submit">Finalizar venda</button>
     </div>
@@ -39,23 +42,42 @@
 </section>
 
 <section class="card">
-  <h2>Vendas registradas</h2>
+  <div class="card-header-row">
+    <h2>Vendas registradas</h2>
+    <form method="get" class="search-form">
+      <input type="text" name="cliente" placeholder="Filtrar por cliente..." value="{{ busca }}">
+      <button type="submit" class="btn-secondary">Filtrar</button>
+    </form>
+  </div>
   <table class="table">
-    <thead><tr><th>ID</th><th>Data</th><th>Total</th><th>Pagamento</th><th>Acoes</th></tr></thead>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Data</th><th>Total</th><th>Pagamento</th><th>Status</th><th>Acoes</th></tr></thead>
     <tbody>
     {% for v in vendas %}
       <tr>
         <td><a class="link" href="{{ url_for('detalhe_venda', venda_id=v.id) }}">#{{ v.id }}</a></td>
+        <td>{{ v.cliente_nome or 'Consumidor final' }}</td>
         <td>{{ v.data }}</td>
         <td>R$ {{ "%.2f"|format(v.total) }}</td>
         <td>{{ v.forma_pagamento }}</td>
+        <td>
+          {% if v.status == 'cancelada' %}
+            <span class="badge badge-warning">Cancelada</span>
+          {% else %}
+            <span class="badge badge-ok">Concluida</span>
+          {% endif %}
+        </td>
         <td class="actions">
-          <a class="btn-small" href="{{ url_for('recibo_venda', venda_id=v.id) }}">Recibo PDF</a>
+          <a class="btn-small" href="{{ url_for('recibo_venda', venda_id=v.id) }}">Recibo</a>
+          {% if v.status != 'cancelada' %}
           <form method="post" action="{{ url_for('cancelar_venda', venda_id=v.id) }}" onsubmit="return confirm('Cancelar esta venda?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn-small btn-danger">Cancelar</button>
           </form>
+          {% endif %}
         </td>
       </tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">Nenhuma venda encontrada.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -67,6 +89,14 @@ document.getElementById('add-item').addEventListener('click', () => {
   const clone = container.firstElementChild.cloneNode(true);
   clone.querySelector('input').value = 1;
   container.appendChild(clone);
+});
+document.getElementById('itens-venda').addEventListener('click', (e) => {
+  if (e.target.classList.contains('btn-remove-item')) {
+    const container = document.getElementById('itens-venda');
+    if (container.children.length > 1) {
+      e.target.closest('.venda-item').remove();
+    }
+  }
 });
 </script>
 {% endblock %}

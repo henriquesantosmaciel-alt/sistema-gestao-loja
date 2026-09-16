@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Usuarios</h1>
+  <p class="muted">Administradores tem acesso total; vendedores acessam apenas vendas e clientes</p>
+</header>
+
+<section class="card">
+  <h2>Novo usuario</h2>
+  <form method="post" action="{{ url_for('novo_usuario') }}" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="nome" placeholder="Nome">
+    <input type="text" name="username" placeholder="Usuario" required maxlength="50">
+    <input type="password" name="senha" placeholder="Senha (min. 6 caracteres)" required minlength="6">
+    <select name="papel">
+      <option value="vendedor">Vendedor</option>
+      <option value="admin">Administrador</option>
+    </select>
+    <button type="submit">Criar usuario</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Usuarios cadastrados</h2>
+  <table class="table">
+    <thead><tr><th>Usuario</th><th>Nome</th><th>Papel</th><th>Status</th><th>Acoes</th></tr></thead>
+    <tbody>
+    {% for u in usuarios %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td>{{ u.nome or '-' }}</td>
+        <td><span class="badge badge-ok">{{ u.papel }}</span></td>
+        <td>
+          {% if u.ativo %}
+            <span class="badge badge-ok">Ativo</span>
+          {% else %}
+            <span class="badge badge-warning">Inativo</span>
+          {% endif %}
+        </td>
+        <td class="actions">
+          {% if u.ativo and u.username != session.get('usuario') %}
+          <form method="post" action="{{ url_for('desativar_usuario', usuario_id=u.id) }}" onsubmit="return confirm('Desativar este usuario?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-small btn-danger">Desativar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

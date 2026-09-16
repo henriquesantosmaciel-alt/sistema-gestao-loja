@@ -3,7 +3,7 @@
 {% block content %}
 <header class="page-header">
   <h1>Venda #{{ venda.id }}</h1>
-  <p class="muted">{{ venda.data }} · {{ venda.forma_pagamento }}</p>
+  <p class="muted">{{ venda.data }} &middot; {{ venda.forma_pagamento }} &middot; {{ venda.cliente_nome or 'Consumidor final' }}</p>
 </header>
 
 <section class="card">
