@@ -1,14 +1,14 @@
 """
 app.py - Interface de linha de comando (CLI) do Sistema de Gestao de Loja
-Complementa a versao web (web_app.py) para uso rapido via terminal.
+Compativel com os modulos validados (estoque, vendas, clientes, fornecedores).
 """
 from database import inicializar_banco
+from validators import ValidationError
 import estoque
 import clientes
 import vendas
 import fornecedores
 import relatorios
-from validators import ValidationError
 
 
 def menu_principal():
@@ -16,7 +16,7 @@ def menu_principal():
     print("1. Estoque")
     print("2. Clientes")
     print("3. Vendas")
-    print("4. Fornecedores e compras")
+    print("4. Fornecedores")
     print("5. Relatorios")
     print("0. Sair")
     return input("Escolha uma opcao: ")
@@ -29,7 +29,6 @@ def menu_estoque():
         print("2. Listar produtos")
         print("3. Repor estoque")
         print("4. Produtos com estoque baixo")
-        print("5. Remover produto")
         print("0. Voltar")
         opcao = input("Opcao: ")
         try:
@@ -44,34 +43,21 @@ def menu_estoque():
                     nome, categoria, preco_custo, preco_venda, quantidade, estoque_minimo
                 )
                 print(f"Produto cadastrado com ID {produto_id}.")
-
             elif opcao == "2":
                 for p in estoque.listar_produtos():
-                    print(f"[{p['id']}] {p['nome']} | Qtd: {p['quantidade']} | "
-                          f"Preco: R$ {p['preco_venda']:.2f}")
-
+                    print(f"[{p['id']}] {p['nome']} | Qtd: {p['quantidade']} | Preco: R$ {p['preco_venda']:.2f}")
             elif opcao == "3":
                 produto_id = int(input("ID do produto: "))
                 quantidade = input("Quantidade a repor: ")
                 estoque.repor_estoque(produto_id, quantidade)
                 print("Estoque atualizado.")
-
             elif opcao == "4":
                 for p in estoque.produtos_estoque_baixo():
-                    print(f"[{p['id']}] {p['nome']} | Qtd atual: {p['quantidade']} "
-                          f"| Minimo: {p['estoque_minimo']}")
-
-            elif opcao == "5":
-                produto_id = int(input("ID do produto a remover: "))
-                estoque.remover_produto(produto_id)
-                print("Produto removido.")
-
+                    print(f"[{p['id']}] {p['nome']} | Qtd atual: {p['quantidade']} | Minimo: {p['estoque_minimo']}")
             elif opcao == "0":
                 break
         except ValidationError as e:
             print(f"Erro: {e}")
-        except ValueError:
-            print("Entrada invalida. Tente novamente.")
 
 
 def menu_clientes():
@@ -89,22 +75,17 @@ def menu_clientes():
                 email = input("Email: ")
                 cliente_id = clientes.cadastrar_cliente(nome, telefone, email)
                 print(f"Cliente cadastrado com ID {cliente_id}.")
-
             elif opcao == "2":
                 for c in clientes.listar_clientes():
                     print(f"[{c['id']}] {c['nome']} | Tel: {c['telefone']}")
-
             elif opcao == "3":
                 cliente_id = int(input("ID do cliente: "))
                 for compra in clientes.historico_compras(cliente_id):
                     print(f"Venda #{compra['id']} | {compra['data']} | R$ {compra['total']:.2f} | {compra['status']}")
-
             elif opcao == "0":
                 break
         except ValidationError as e:
             print(f"Erro: {e}")
-        except ValueError:
-            print("Entrada invalida. Tente novamente.")
 
 
 def menu_vendas():
@@ -128,14 +109,11 @@ def menu_vendas():
                 cliente_id_input = input("ID do cliente (opcional): ")
                 cliente_id = int(cliente_id_input) if cliente_id_input else None
                 forma_pagamento = input("Forma de pagamento (dinheiro/cartao/pix/fiado): ") or "dinheiro"
-                venda_id, total = vendas.registrar_venda(itens, cliente_id, forma_pagamento, vendedor="cli")
+                venda_id, total = vendas.registrar_venda(itens, cliente_id, forma_pagamento)
                 print(f"Venda #{venda_id} registrada. Total: R$ {total:.2f}")
-
             elif opcao == "2":
                 for v in vendas.listar_vendas():
-                    print(f"[{v['id']}] {v['data']} | Total: R$ {v['total']:.2f} | "
-                          f"{v['forma_pagamento']} | {v['status']}")
-
+                    print(f"[{v['id']}] {v['data']} | Total: R$ {v['total']:.2f} | {v['forma_pagamento']} | {v['status']}")
             elif opcao == "3":
                 venda_id = int(input("ID da venda: "))
                 venda, itens = vendas.detalhes_venda(venda_id)
@@ -143,25 +121,19 @@ def menu_vendas():
                     print(f"Venda #{venda['id']} | Total: R$ {venda['total']:.2f}")
                     for item in itens:
                         print(f"  - {item['produto_nome']} x{item['quantidade']} = R$ {item['subtotal']:.2f}")
-                else:
-                    print("Venda nao encontrada.")
-
             elif opcao == "4":
                 venda_id = int(input("ID da venda a cancelar: "))
                 vendas.cancelar_venda(venda_id)
                 print("Venda cancelada e estoque restaurado.")
-
             elif opcao == "0":
                 break
         except ValidationError as e:
             print(f"Erro: {e}")
-        except ValueError:
-            print("Entrada invalida. Tente novamente.")
 
 
 def menu_fornecedores():
     while True:
-        print("\n--- FORNECEDORES E COMPRAS ---")
+        print("\n--- FORNECEDORES ---")
         print("1. Cadastrar fornecedor")
         print("2. Listar fornecedores")
         print("3. Registrar compra")
@@ -174,33 +146,26 @@ def menu_fornecedores():
                 telefone = input("Telefone: ")
                 email = input("Email: ")
                 cnpj = input("CNPJ: ")
-                fornecedores.cadastrar_fornecedor(nome, telefone, email, cnpj)
-                print("Fornecedor cadastrado.")
-
+                fornecedor_id = fornecedores.cadastrar_fornecedor(nome, telefone, email, cnpj)
+                print(f"Fornecedor cadastrado com ID {fornecedor_id}.")
             elif opcao == "2":
                 for f in fornecedores.listar_fornecedores():
                     print(f"[{f['id']}] {f['nome']} | Tel: {f['telefone']}")
-
             elif opcao == "3":
                 produto_id = int(input("ID do produto: "))
-                fornecedor_id_input = input("ID do fornecedor (opcional): ")
-                fornecedor_id = int(fornecedor_id_input) if fornecedor_id_input else None
                 quantidade = input("Quantidade: ")
                 preco_unitario = input("Preco unitario: ")
-                fornecedores.registrar_compra(produto_id, quantidade, preco_unitario, fornecedor_id)
-                print("Compra registrada e estoque atualizado.")
-
+                fornecedor_input = input("ID do fornecedor (opcional): ")
+                fornecedor_id = int(fornecedor_input) if fornecedor_input else None
+                compra_id = fornecedores.registrar_compra(produto_id, quantidade, preco_unitario, fornecedor_id)
+                print(f"Compra #{compra_id} registrada. Estoque atualizado.")
             elif opcao == "4":
                 for c in fornecedores.listar_compras():
-                    print(f"{c['produto_nome']} | Qtd: {c['quantidade']} | "
-                          f"Unit: R$ {c['preco_unitario']:.2f} | {c['data']}")
-
+                    print(f"{c['produto_nome']} | Qtd: {c['quantidade']} | R$ {c['preco_unitario']:.2f} | {c['data']}")
             elif opcao == "0":
                 break
         except ValidationError as e:
             print(f"Erro: {e}")
-        except ValueError:
-            print("Entrada invalida. Tente novamente.")
 
 
 def menu_relatorios():
@@ -219,26 +184,20 @@ def menu_relatorios():
             fim = input("Data fim (AAAA-MM-DD): ")
             resultado = relatorios.faturamento_periodo(inicio, fim)
             print(f"Faturamento: R$ {resultado['faturamento']:.2f} em {resultado['qtd_vendas']} vendas.")
-
         elif opcao == "2":
             for p in relatorios.produtos_mais_vendidos():
                 print(f"{p['nome']} | Vendidos: {p['total_vendido']} | Receita: R$ {p['receita']:.2f}")
-
         elif opcao == "3":
             for p in relatorios.relatorio_estoque_critico():
                 print(f"{p['nome']} | Qtd: {p['quantidade']} | Minimo: {p['estoque_minimo']}")
-
         elif opcao == "4":
             inicio = input("Data inicio (AAAA-MM-DD): ")
             fim = input("Data fim (AAAA-MM-DD): ")
             resultado = relatorios.lucro_periodo(inicio, fim)
-            print(f"Receita: R$ {resultado['receita']:.2f} | Custo: R$ {resultado['custo']:.2f} "
-                  f"| Lucro: R$ {resultado['lucro']:.2f}")
-
+            print(f"Receita: R$ {resultado['receita']:.2f} | Custo: R$ {resultado['custo']:.2f} | Lucro: R$ {resultado['lucro']:.2f}")
         elif opcao == "5":
             for c in relatorios.clientes_top():
                 print(f"{c['nome']} | Compras: {c['qtd_compras']} | Total gasto: R$ {c['total_gasto']:.2f}")
-
         elif opcao == "0":
             break
 
