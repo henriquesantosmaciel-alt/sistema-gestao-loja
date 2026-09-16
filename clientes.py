@@ -2,7 +2,7 @@
 clientes.py - Modulo de gestao de clientes
 """
 from database import get_connection
-from validators import validar_texto_obrigatorio, validar_email
+from validators import validar_texto_obrigatorio, validar_email, ValidationError
 
 
 def cadastrar_cliente(nome, telefone=None, email=None):

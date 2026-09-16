@@ -1,5 +1,6 @@
 """
-recibo.py - Geracao de recibos em PDF para vendas (reportlab)
+recibo.py - Geracao de recibos em PDF para vendas
+Usa apenas reportlab.
 """
 from reportlab.lib.pagesizes import A5
 from reportlab.lib.units import mm

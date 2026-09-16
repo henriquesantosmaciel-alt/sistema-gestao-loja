@@ -3,7 +3,7 @@ fornecedores.py - Modulo de gestao de fornecedores e compras
 """
 from database import get_connection
 from estoque import repor_estoque
-from validators import validar_texto_obrigatorio, validar_email, validar_inteiro_positivo, validar_numero_positivo
+from validators import validar_texto_obrigatorio, validar_email, validar_inteiro_positivo, validar_numero_positivo, ValidationError
 
 
 def cadastrar_fornecedor(nome, telefone=None, email=None, cnpj=None):
