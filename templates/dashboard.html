@@ -6,6 +6,10 @@
   <p class="muted">Visao geral da loja em tempo real</p>
 </header>
 
+{% if not caixa %}
+<div class="flash flash-erro">Nenhum caixa aberto no momento. <a class="link" href="{{ url_for('pagina_caixa') }}">Abrir caixa</a></div>
+{% endif %}
+
 <section class="cards-grid">
   <div class="card stat">
     <span class="stat-label">Faturamento hoje</span>
@@ -29,6 +33,22 @@
   </div>
 </section>
 
+<section class="cards-grid">
+  <div class="card stat">
+    <span class="stat-label">A pagar (em aberto)</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(financeiro.a_pagar) }}</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">A receber (em aberto)</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(financeiro.a_receber) }}</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Contas vencidas</span>
+    <span class="stat-value">{{ financeiro.vencidas }}</span>
+    <span class="stat-sub"><a class="link" href="{{ url_for('pagina_financeiro') }}">Ver financeiro</a></span>
+  </div>
+</section>
+
 <section class="grid-2">
   <div class="card">
     <h2>Vendas dos ultimos 7 dias</h2>
@@ -37,7 +57,7 @@
   <div class="card">
     <h2>Estoque critico</h2>
     {% if estoque_critico %}
-    <table class="table">
+    <div class="table-wrap"><table class="table">
       <thead><tr><th>Produto</th><th>Qtd</th><th>Minimo</th></tr></thead>
       <tbody>
       {% for p in estoque_critico %}
@@ -48,7 +68,7 @@
         </tr>
       {% endfor %}
       </tbody>
-    </table>
+    </table></div>
     {% else %}
       <p class="muted">Nenhum produto com estoque baixo. Tudo sob controle.</p>
     {% endif %}

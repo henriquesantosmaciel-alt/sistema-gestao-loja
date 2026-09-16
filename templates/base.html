@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Sistema de Gestao de Loja{% endblock %}</title>
+<title>{% block title %}LojaOS{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -16,13 +16,22 @@
     </div>
     <nav>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
+      <span class="nav-group">Operacional</span>
+      <a href="{{ url_for('pagina_caixa') }}" class="{{ 'active' if request.endpoint == 'pagina_caixa' }}">Caixa{% if not caixa_atual %} <span class="dot-off"></span>{% endif %}</a>
       <a href="{{ url_for('pagina_vendas') }}" class="{{ 'active' if request.endpoint in ['pagina_vendas','detalhe_venda'] }}">Vendas</a>
+      <a href="{{ url_for('pagina_pedidos') }}" class="{{ 'active' if request.endpoint in ['pagina_pedidos','detalhe_pedido'] }}">Pedidos</a>
       <a href="{{ url_for('pagina_clientes') }}" class="{{ 'active' if request.endpoint in ['pagina_clientes','detalhe_cliente'] }}">Clientes</a>
       {% if papel_usuario == 'admin' %}
+      <span class="nav-group">Cadastros</span>
       <a href="{{ url_for('pagina_estoque') }}" class="{{ 'active' if request.endpoint == 'pagina_estoque' }}">Estoque</a>
       <a href="{{ url_for('pagina_fornecedores') }}" class="{{ 'active' if request.endpoint == 'pagina_fornecedores' }}">Fornecedores</a>
+      <span class="nav-group">Gestao</span>
+      <a href="{{ url_for('pagina_financeiro') }}" class="{{ 'active' if request.endpoint == 'pagina_financeiro' }}">Financeiro</a>
       <a href="{{ url_for('pagina_relatorios') }}" class="{{ 'active' if request.endpoint == 'pagina_relatorios' }}">Relatorios</a>
+      <a href="{{ url_for('pagina_fiscal') }}" class="{{ 'active' if request.endpoint == 'pagina_fiscal' }}">Fiscal</a>
+      <span class="nav-group">Configuracao</span>
       <a href="{{ url_for('pagina_usuarios') }}" class="{{ 'active' if request.endpoint == 'pagina_usuarios' }}">Usuarios</a>
+      <a href="{{ url_for('pagina_auditoria') }}" class="{{ 'active' if request.endpoint == 'pagina_auditoria' }}">Auditoria</a>
       {% endif %}
     </nav>
     <a href="{{ url_for('logout') }}" class="logout">Sair ({{ session.get('usuario') }} &middot; {{ papel_usuario }})</a>

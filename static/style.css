@@ -32,21 +32,22 @@ body {
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow-y: auto;
 }
 
 .brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; padding: 0 8px; }
 .brand.center { justify-content: center; margin-bottom: 12px; }
 .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
 
-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 nav a {
   color: var(--muted);
   text-decoration: none;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
@@ -54,6 +55,20 @@ nav a {
 }
 nav a:hover { background: var(--bg-hover); color: var(--text); }
 nav a.active { background: var(--accent-soft); color: var(--accent); }
+
+.nav-group {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 14px 12px 4px;
+  opacity: 0.7;
+}
+.dot-off {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--warning); margin-left: 4px; vertical-align: middle;
+}
 
 .logout {
   color: var(--muted);
@@ -101,7 +116,8 @@ nav a.active { background: var(--accent-soft); color: var(--accent); }
 .stat-value { font-size: 28px; font-weight: 700; }
 .stat-sub { font-size: 12px; color: var(--muted); }
 
-.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
 .table th {
   text-align: left;
   color: var(--muted);
@@ -239,6 +255,11 @@ button:hover { filter: brightness(1.1); }
 }
 .auth-card h1 { font-size: 22px; margin-top: 8px; }
 .auth-card label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+code {
+  background: var(--bg); border: 1px solid var(--border); padding: 2px 6px;
+  border-radius: 6px; font-size: 12px;
+}
 
 ::selection { background: var(--accent-soft); color: var(--text); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
