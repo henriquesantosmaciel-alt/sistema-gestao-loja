@@ -16,13 +16,16 @@
     </div>
     <nav>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
-      <a href="{{ url_for('pagina_estoque') }}" class="{{ 'active' if request.endpoint == 'pagina_estoque' }}">Estoque</a>
-      <a href="{{ url_for('pagina_vendas') }}" class="{{ 'active' if request.endpoint == 'pagina_vendas' }}">Vendas</a>
+      <a href="{{ url_for('pagina_vendas') }}" class="{{ 'active' if request.endpoint in ['pagina_vendas','detalhe_venda'] }}">Vendas</a>
       <a href="{{ url_for('pagina_clientes') }}" class="{{ 'active' if request.endpoint in ['pagina_clientes','detalhe_cliente'] }}">Clientes</a>
+      {% if papel_usuario == 'admin' %}
+      <a href="{{ url_for('pagina_estoque') }}" class="{{ 'active' if request.endpoint == 'pagina_estoque' }}">Estoque</a>
       <a href="{{ url_for('pagina_fornecedores') }}" class="{{ 'active' if request.endpoint == 'pagina_fornecedores' }}">Fornecedores</a>
       <a href="{{ url_for('pagina_relatorios') }}" class="{{ 'active' if request.endpoint == 'pagina_relatorios' }}">Relatorios</a>
+      <a href="{{ url_for('pagina_usuarios') }}" class="{{ 'active' if request.endpoint == 'pagina_usuarios' }}">Usuarios</a>
+      {% endif %}
     </nav>
-    <a href="{{ url_for('logout') }}" class="logout">Sair ({{ session.get('usuario') }})</a>
+    <a href="{{ url_for('logout') }}" class="logout">Sair ({{ session.get('usuario') }} &middot; {{ papel_usuario }})</a>
   </aside>
   <main class="content">
     {% with messages = get_flashed_messages(with_categories=true) %}

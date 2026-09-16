@@ -9,18 +9,25 @@
 <section class="card">
   <h2>Novo produto</h2>
   <form method="post" action="{{ url_for('novo_produto') }}" class="form-grid">
-    <input type="text" name="nome" placeholder="Nome do produto" required>
-    <input type="text" name="categoria" placeholder="Categoria">
-    <input type="number" step="0.01" name="preco_custo" placeholder="Preco de custo">
-    <input type="number" step="0.01" name="preco_venda" placeholder="Preco de venda" required>
-    <input type="number" name="quantidade" placeholder="Quantidade inicial">
-    <input type="number" name="estoque_minimo" placeholder="Estoque minimo (padrao 5)">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="nome" placeholder="Nome do produto" required maxlength="200">
+    <input type="text" name="categoria" placeholder="Categoria" maxlength="100">
+    <input type="number" step="0.01" min="0" name="preco_custo" placeholder="Preco de custo">
+    <input type="number" step="0.01" min="0.01" name="preco_venda" placeholder="Preco de venda" required>
+    <input type="number" min="0" name="quantidade" placeholder="Quantidade inicial">
+    <input type="number" min="0" name="estoque_minimo" placeholder="Estoque minimo (padrao 5)">
     <button type="submit">Cadastrar</button>
   </form>
 </section>
 
 <section class="card">
-  <h2>Produtos cadastrados</h2>
+  <div class="card-header-row">
+    <h2>Produtos cadastrados</h2>
+    <form method="get" class="search-form">
+      <input type="text" name="q" placeholder="Buscar por nome ou categoria..." value="{{ busca }}">
+      <button type="submit" class="btn-secondary">Buscar</button>
+    </form>
+  </div>
   <table class="table">
     <thead>
       <tr><th>Nome</th><th>Categoria</th><th>Preco</th><th>Qtd</th><th>Acoes</th></tr>
@@ -40,14 +47,18 @@
         </td>
         <td class="actions">
           <form method="post" action="{{ url_for('repor_produto', produto_id=p.id) }}" class="inline-form">
-            <input type="number" name="quantidade" placeholder="Qtd" required class="mini-input">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="number" name="quantidade" placeholder="Qtd" min="1" required class="mini-input">
             <button type="submit" class="btn-small">Repor</button>
           </form>
           <form method="post" action="{{ url_for('remover_produto', produto_id=p.id) }}" onsubmit="return confirm('Remover este produto?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn-small btn-danger">Remover</button>
           </form>
         </td>
       </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">Nenhum produto encontrado.</td></tr>
     {% endfor %}
     </tbody>
   </table>

@@ -18,9 +18,9 @@
     <span class="stat-sub">{{ resumo.vendas_mes }} vendas</span>
   </div>
   <div class="card stat">
-    <span class="stat-label">Produtos cadastrados</span>
-    <span class="stat-value">{{ resumo.total_produtos }}</span>
-    <span class="stat-sub">{{ resumo.produtos_estoque_baixo }} com estoque baixo</span>
+    <span class="stat-label">Valor em estoque</span>
+    <span class="stat-value">R$ {{ "%.2f"|format(valor_estoque) }}</span>
+    <span class="stat-sub">{{ resumo.total_produtos }} produtos ativos</span>
   </div>
   <div class="card stat">
     <span class="stat-label">Clientes</span>
@@ -50,7 +50,7 @@
       </tbody>
     </table>
     {% else %}
-      <p class="muted">Nenhum produto com estoque baixo.</p>
+      <p class="muted">Nenhum produto com estoque baixo. Tudo sob controle.</p>
     {% endif %}
   </div>
 </section>

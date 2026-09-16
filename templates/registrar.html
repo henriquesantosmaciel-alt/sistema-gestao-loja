@@ -3,18 +3,24 @@
 {% block auth_content %}
 <div class="auth-wrapper">
   <form method="post" class="auth-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="brand center">
       <span class="brand-dot"></span>
       <span>Loja<strong>OS</strong></span>
     </div>
     <h1>Configuracao inicial</h1>
     <p class="muted">Crie o primeiro usuario administrador</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for categoria, mensagem in messages %}
+        <div class="flash flash-{{ categoria }}">{{ mensagem }}</div>
+      {% endfor %}
+    {% endwith %}
     <label>Nome</label>
     <input type="text" name="nome">
     <label>Usuario</label>
     <input type="text" name="username" required autofocus>
-    <label>Senha</label>
-    <input type="password" name="senha" required>
+    <label>Senha (minimo 6 caracteres)</label>
+    <input type="password" name="senha" required minlength="6">
     <button type="submit">Criar conta</button>
   </form>
 </div>

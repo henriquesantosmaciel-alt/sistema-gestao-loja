@@ -3,6 +3,7 @@
 {% block auth_content %}
 <div class="auth-wrapper">
   <form method="post" class="auth-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="brand center">
       <span class="brand-dot"></span>
       <span>Loja<strong>OS</strong></span>
