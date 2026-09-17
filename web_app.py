@@ -1,8 +1,9 @@
 """
 web_app.py - Interface web (Flask) do LojaOS
 Dashboard moderno e minimalista, com autenticacao, controle de papeis
-(admin/vendedor), protecao CSRF, caixa, financeiro, pedidos/orcamentos
-e area fiscal em homologacao (sem emissao real de notas).
+(admin/vendedor), protecao CSRF, cabecalhos de seguranca, limite de
+tentativas de login, caixa, financeiro, pedidos/orcamentos e area
+fiscal em homologacao (sem emissao real de notas).
 """
 from datetime import date
 from functools import wraps
@@ -22,6 +23,7 @@ import fornecedores
 import relatorios
 import auth
 import loja_avancada as loja
+import seguranca
 from validators import ValidationError
 from recibo import gerar_recibo_pdf
 
@@ -32,6 +34,11 @@ app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE
 app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
 
 csrf = CSRFProtect(app)
+
+
+@app.after_request
+def add_security_headers(response):
+    return seguranca.aplicar_cabecalhos_seguranca(response)
 
 
 @app.errorhandler(ValidationError)
@@ -87,12 +94,23 @@ def inject_globals():
 def login():
     if not auth.usuario_existe():
         return redirect(url_for("registrar"))
+
     if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+
+        if seguranca.login_bloqueado(username):
+            restante = seguranca.segundos_restantes_bloqueio(username)
+            flash(f"Muitas tentativas de login. Tente novamente em {restante} segundos.", "erro")
+            return render_template("login.html")
+
         usuario = auth.autenticar(request.form.get("username", ""), request.form.get("senha", ""))
         if usuario:
+            seguranca.limpar_tentativas(username)
             session["usuario"] = usuario["username"]
             session["papel"] = usuario["papel"]
             return redirect(url_for("dashboard"))
+
+        seguranca.registrar_falha_login(username)
         flash("Usuario ou senha invalidos.", "erro")
     return render_template("login.html")
 
@@ -103,6 +121,8 @@ def registrar():
         return redirect(url_for("login"))
     if request.method == "POST":
         try:
+            if request.form.get("senha") != request.form.get("confirmar_senha"):
+                raise ValidationError("As senhas informadas nao sao iguais.")
             auth.criar_usuario(request.form["username"], request.form["senha"], request.form.get("nome"), papel="admin")
             flash("Usuario administrador criado! Faca login.", "sucesso")
             return redirect(url_for("login"))

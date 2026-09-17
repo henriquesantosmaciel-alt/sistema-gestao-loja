@@ -17,7 +17,7 @@
     <nav>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
       <span class="nav-group">Operacional</span>
-      <a href="{{ url_for('pagina_caixa') }}" class="{{ 'active' if request.endpoint == 'pagina_caixa' }}">Caixa{% if not caixa_atual %} <span class="dot-off"></span>{% endif %}</a>
+      <a href="{{ url_for('pagina_caixa') }}" class="{{ 'active' if request.endpoint == 'pagina_caixa' }}">Caixa{% if not caixa_atual %} <span class="dot-off" title="Caixa fechado"></span>{% endif %}</a>
       <a href="{{ url_for('pagina_vendas') }}" class="{{ 'active' if request.endpoint in ['pagina_vendas','detalhe_venda'] }}">Vendas</a>
       <a href="{{ url_for('pagina_pedidos') }}" class="{{ 'active' if request.endpoint in ['pagina_pedidos','detalhe_pedido'] }}">Pedidos</a>
       <a href="{{ url_for('pagina_clientes') }}" class="{{ 'active' if request.endpoint in ['pagina_clientes','detalhe_cliente'] }}">Clientes</a>
@@ -39,9 +39,11 @@
   <main class="content">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
+        <div class="flash-stack">
         {% for categoria, mensagem in messages %}
           <div class="flash flash-{{ categoria }}">{{ mensagem }}</div>
         {% endfor %}
+        </div>
       {% endif %}
     {% endwith %}
     {% block content %}{% endblock %}
@@ -50,5 +52,6 @@
 {% else %}
   {% block auth_content %}{% endblock %}
 {% endif %}
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

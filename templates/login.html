@@ -16,10 +16,11 @@
       {% endfor %}
     {% endwith %}
     <label>Usuario</label>
-    <input type="text" name="username" required autofocus>
+    <input type="text" name="username" required autofocus autocomplete="username">
     <label>Senha</label>
-    <input type="password" name="senha" required>
+    <input type="password" name="senha" required autocomplete="current-password">
     <button type="submit">Entrar</button>
+    <p class="security-note">Protegido contra tentativas repetidas de login</p>
   </form>
 </div>
 {% endblock %}

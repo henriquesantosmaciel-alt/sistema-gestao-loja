@@ -16,12 +16,15 @@
       {% endfor %}
     {% endwith %}
     <label>Nome</label>
-    <input type="text" name="nome">
+    <input type="text" name="nome" autocomplete="name">
     <label>Usuario</label>
-    <input type="text" name="username" required autofocus>
+    <input type="text" name="username" required autofocus maxlength="50" autocomplete="username">
     <label>Senha (minimo 6 caracteres)</label>
-    <input type="password" name="senha" required minlength="6">
+    <input type="password" name="senha" required minlength="6" autocomplete="new-password">
+    <label>Confirmar senha</label>
+    <input type="password" name="confirmar_senha" required minlength="6" autocomplete="new-password">
     <button type="submit">Criar conta</button>
+    <p class="security-note">Senha protegida com hash PBKDF2 (Werkzeug)</p>
   </form>
 </div>
 {% endblock %}
